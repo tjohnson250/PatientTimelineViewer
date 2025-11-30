@@ -1,0 +1,455 @@
+/* custom.css - Patient Timeline Viewer Styles */
+
+/* Color scheme from design document */
+:root {
+  --color-encounter: #3498db;
+  --color-diagnosis: #e74c3c;
+  --color-procedure: #9b59b6;
+  --color-lab: #27ae60;
+  --color-prescribing: #e67e22;
+  --color-dispensing: #f39c12;
+  --color-vital: #1abc9c;
+  --color-condition: #e91e63;
+  --color-death: #2c3e50;
+  
+  --bg-primary: #f8f9fa;
+  --bg-secondary: #ffffff;
+  --text-primary: #2c3e50;
+  --text-secondary: #7f8c8d;
+  --border-color: #dee2e6;
+}
+
+/* Main layout */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.container-fluid {
+  padding: 15px;
+}
+
+/* Header */
+.app-title {
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+/* Demographics panel */
+.demographics-panel {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 15px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.demographics-panel .demo-row {
+  margin-bottom: 8px;
+}
+
+.demographics-panel .demo-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-right: 5px;
+}
+
+.demographics-panel .demo-value {
+  color: var(--text-primary);
+  margin-right: 20px;
+}
+
+.demographics-panel .demo-section {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.demographics-panel ul {
+  margin: 5px 0;
+  padding-left: 20px;
+}
+
+.demographics-panel li {
+  margin-bottom: 3px;
+}
+
+/* Filter panels */
+.filter-panel {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.filter-panel h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Event type checkboxes with colored indicators */
+.event-type-checkbox {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 15px;
+  margin-bottom: 8px;
+}
+
+.event-type-checkbox .color-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  margin-right: 5px;
+  display: inline-block;
+}
+
+.color-indicator.encounters { background-color: var(--color-encounter); }
+.color-indicator.diagnoses { background-color: var(--color-diagnosis); }
+.color-indicator.procedures { background-color: var(--color-procedure); }
+.color-indicator.labs { background-color: var(--color-lab); }
+.color-indicator.prescribing { background-color: var(--color-prescribing); }
+.color-indicator.dispensing { background-color: var(--color-dispensing); }
+.color-indicator.vitals { background-color: var(--color-vital); }
+.color-indicator.conditions { background-color: var(--color-condition); }
+
+/* Timeline container */
+.timeline-container {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 15px;
+}
+
+/* Timeline event styling */
+.vis-timeline {
+  border: none;
+  font-family: inherit;
+}
+
+.vis-item {
+  border-radius: 4px;
+  border: none;
+  font-size: 11px;
+}
+
+.vis-item.vis-point {
+  border-radius: 50%;
+}
+
+.vis-item.vis-range {
+  border-radius: 4px;
+}
+
+/* Event type colors */
+.vis-item.event-encounter {
+  background-color: var(--color-encounter);
+  border-color: var(--color-encounter);
+  color: white;
+}
+
+.vis-item.event-diagnosis {
+  background-color: var(--color-diagnosis);
+  border-color: var(--color-diagnosis);
+  color: white;
+}
+
+.vis-item.event-procedure {
+  background-color: var(--color-procedure);
+  border-color: var(--color-procedure);
+  color: white;
+}
+
+.vis-item.event-lab {
+  background-color: var(--color-lab);
+  border-color: var(--color-lab);
+  color: white;
+}
+
+.vis-item.event-lab-abnormal {
+  background-color: var(--color-lab);
+  border: 2px solid #c0392b !important;
+}
+
+.vis-item.event-prescribing {
+  background-color: var(--color-prescribing);
+  border-color: var(--color-prescribing);
+  color: white;
+}
+
+.vis-item.event-dispensing {
+  background-color: var(--color-dispensing);
+  border-color: var(--color-dispensing);
+  color: white;
+}
+
+.vis-item.event-vital {
+  background-color: var(--color-vital);
+  border-color: var(--color-vital);
+  color: white;
+}
+
+.vis-item.event-condition {
+  background-color: var(--color-condition);
+  border-color: var(--color-condition);
+  color: white;
+}
+
+/* Death marker - vertical line style */
+.vis-item.event-death {
+  background-color: var(--color-death);
+  border: 2px dashed var(--color-death);
+  color: white;
+  font-weight: bold;
+  z-index: 100;
+}
+
+/* Point events */
+.vis-item.vis-point .vis-item-content {
+  padding: 2px 6px;
+}
+
+/* Selected item */
+.vis-item.vis-selected {
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.5);
+}
+
+/* Timeline groups (rows) */
+.vis-label {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.vis-labelset .vis-label {
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Time axis */
+.vis-time-axis .vis-text {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+/* Tooltip styling */
+.vis-tooltip {
+  background-color: var(--bg-secondary) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+  padding: 10px 12px !important;
+  font-size: 12px !important;
+  max-width: 350px !important;
+  color: var(--text-primary) !important;
+}
+
+.vis-tooltip b {
+  color: var(--text-primary);
+}
+
+/* Detail panel */
+.detail-panel {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 15px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.detail-panel h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.detail-panel .detail-row {
+  display: flex;
+  padding: 6px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-panel .detail-key {
+  font-weight: 500;
+  color: var(--text-secondary);
+  width: 180px;
+  flex-shrink: 0;
+}
+
+.detail-panel .detail-value {
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+/* Buttons */
+.btn-load {
+  background-color: var(--color-encounter);
+  border-color: var(--color-encounter);
+  color: white;
+}
+
+.btn-load:hover {
+  background-color: #2980b9;
+  border-color: #2980b9;
+  color: white;
+}
+
+.btn-related {
+  background-color: var(--color-procedure);
+  border-color: var(--color-procedure);
+  color: white;
+  margin-right: 10px;
+}
+
+.btn-related:hover {
+  background-color: #8e44ad;
+  border-color: #8e44ad;
+  color: white;
+}
+
+.btn-reset {
+  background-color: var(--text-secondary);
+  border-color: var(--text-secondary);
+  color: white;
+}
+
+.btn-reset:hover {
+  background-color: #5a6268;
+  border-color: #545b62;
+  color: white;
+}
+
+/* Loading overlay */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.loading-spinner {
+  text-align: center;
+}
+
+.loading-spinner .fa-spinner {
+  font-size: 48px;
+  color: var(--color-encounter);
+}
+
+/* Advanced filters collapsible */
+.advanced-filters {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid var(--border-color);
+}
+
+.advanced-filters .form-group {
+  margin-bottom: 12px;
+}
+
+.advanced-filters label {
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* Aggregation radio buttons */
+.aggregation-options label {
+  margin-right: 15px;
+}
+
+/* No data message */
+.no-data-message {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+
+.no-data-message .icon {
+  font-size: 48px;
+  margin-bottom: 15px;
+  color: #ddd;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .demographics-panel .demo-row {
+    flex-wrap: wrap;
+  }
+  
+  .event-type-checkbox {
+    margin-bottom: 10px;
+    width: 48%;
+  }
+}
+
+/* Well/panel for patient ID input */
+.patient-input-panel {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.patient-input-panel .form-group {
+  margin-bottom: 0;
+}
+
+.patient-input-panel .input-group {
+  display: flex;
+  gap: 10px;
+}
+
+.patient-input-panel input[type="text"] {
+  flex: 1;
+}
+
+/* Status messages */
+.status-message {
+  padding: 10px 15px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+}
+
+.status-message.info {
+  background-color: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid #90caf9;
+}
+
+.status-message.warning {
+  background-color: #fff3e0;
+  color: #e65100;
+  border: 1px solid #ffcc80;
+}
+
+.status-message.error {
+  background-color: #ffebee;
+  color: #c62828;
+  border: 1px solid #ef9a9a;
+}
+
+.status-message.success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #a5d6a7;
+}

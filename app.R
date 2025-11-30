@@ -188,7 +188,8 @@ ui <- fluidPage(
       class = "timeline-container",
       fluidRow(
         column(9,
-          h4("Timeline", style = "margin: 0 0 10px 0;")
+          h4("Timeline", style = "margin: 0 0 5px 0;"),
+          p(class = "timeline-hint", "Scroll to zoom • Click and drag to pan")
         ),
         column(3,
           div(
@@ -198,7 +199,10 @@ ui <- fluidPage(
           )
         )
       ),
-      timevisOutput("timeline", height = "400px")
+      div(
+        style = "height: 600px; overflow-y: auto;",
+        timevisOutput("timeline", height = "600px")
+      )
     ),
     
     # Event details panel
@@ -445,7 +449,10 @@ server <- function(input, output, session) {
       margin = list(
         item = list(horizontal = 5, vertical = 5)
       ),
-      autoResize = TRUE
+      autoResize = TRUE,
+      maxHeight = "600px",
+      verticalScroll = TRUE,
+      zoomable = TRUE
     )
 
     timevis(

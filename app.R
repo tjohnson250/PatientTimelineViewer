@@ -193,12 +193,8 @@ ui <- fluidPage(
         column(3,
           div(
             style = "text-align: right;",
-            actionButton("zoom_fit", "", icon = icon("expand"), 
-                         class = "btn-sm btn-outline-secondary", title = "Fit All"),
-            actionButton("zoom_in", "", icon = icon("search-plus"), 
-                         class = "btn-sm btn-outline-secondary", title = "Zoom In"),
-            actionButton("zoom_out", "", icon = icon("search-minus"), 
-                         class = "btn-sm btn-outline-secondary", title = "Zoom Out")
+            actionButton("zoom_fit", "Fit All", icon = icon("expand"),
+                         class = "btn-sm btn-outline-secondary")
           )
         )
       ),
@@ -428,37 +424,38 @@ server <- function(input, output, session) {
   # Render timeline
   output$timeline <- renderTimevis({
     req(filtered_events())
-    
+
     events <- filtered_events()
-    
+
     if (nrow(events) == 0) {
       return(timevis(data.frame(), groups = get_timeline_groups()))
     }
-    
+
     # Configure timeline options
     config <- list(
       stack = TRUE,
       stackSubgroups = TRUE,
       showCurrentTime = FALSE,
       zoomMin = 86400000,  # 1 day in milliseconds
-      zoomMax = 315360000000,  # 10 years in milliseconds
+      zoomMax = 3153600000000,  # 100 years in milliseconds
       tooltip = list(
         followMouse = TRUE,
         overflowMethod = "flip"
       ),
       margin = list(
         item = list(horizontal = 5, vertical = 5)
-      )
+      ),
+      autoResize = TRUE
     )
-    
+
     timevis(
       data = events,
       groups = get_timeline_groups(),
       options = config,
-      showZoom = FALSE
+      showZoom = TRUE
     )
   })
-  
+
   # Handle timeline event selection
   observeEvent(input$timeline_selected, {
     selected_id <- input$timeline_selected
@@ -577,34 +574,56 @@ server <- function(input, output, session) {
     }
   })
   
+  # Helper function to fit timeline window
+  fit_timeline <- function() {
+    shinyjs::runjs("
+      (function() {
+        var widget = HTMLWidgets.find('#timeline');
+        if (widget && widget.timeline) {
+          widget.timeline.fit({
+            animation: {
+              duration: 500,
+              easingFunction: 'easeInOutQuad'
+            }
+          });
+        }
+      })();
+    ")
+  }
+
+  # Helper function to set timeline window to specific dates
+  set_timeline_window <- function(start_date, end_date) {
+    start_ms <- as.numeric(as.POSIXct(start_date)) * 1000
+    end_ms <- as.numeric(as.POSIXct(end_date)) * 1000
+
+    js_code <- sprintf("
+      (function() {
+        var widget = HTMLWidgets.find('#timeline');
+        if (widget && widget.timeline) {
+          widget.timeline.setWindow(%f, %f, {animation: true});
+        }
+      })();
+    ", start_ms, end_ms)
+
+    shinyjs::runjs(js_code)
+  }
+
   # Zoom controls
   observeEvent(input$zoom_fit, {
-    fitWindow("timeline")
+    fit_timeline()
   })
-  
-  observeEvent(input$zoom_in, {
-    centerTime("timeline", Sys.Date())
-    # Note: timevis doesn't have built-in zoom functions, 
-    # but you can use setWindow with narrower range
-  })
-  
-  observeEvent(input$zoom_out, {
-    if (!is.null(rv$date_range)) {
-      setWindow("timeline", rv$date_range$min - 30, rv$date_range$max + 30)
-    }
-  })
-  
+
   # Show related events for encounter
   observeEvent(input$show_related, {
     req(rv$selected_event)
     req(rv$selected_event$event_type == "encounter")
-    
+
     # Get encounter dates
     enc_id <- rv$selected_event$source_key
     enc <- rv$patient_data$encounters %>%
       filter(ENCOUNTERID == enc_id) %>%
       slice(1)
-    
+
     if (nrow(enc) > 0) {
       start <- as.Date(enc$ADMIT_DATE) - 1
       end <- if (!is.na(enc$DISCHARGE_DATE)) {
@@ -612,23 +631,26 @@ server <- function(input, output, session) {
       } else {
         as.Date(enc$ADMIT_DATE) + 1
       }
-      
+
       # Update date filters
       updateDateInput(session, "date_start", value = start)
       updateDateInput(session, "date_end", value = end)
-      
+
       # Zoom timeline to this range
-      setWindow("timeline", start, end)
+      set_timeline_window(start, end)
     }
   })
-  
+
   # Reset view
   observeEvent(input$reset_view, {
+    # Reset date filter inputs
     if (!is.null(rv$date_range)) {
       updateDateInput(session, "date_start", value = rv$date_range$min)
       updateDateInput(session, "date_end", value = rv$date_range$max)
-      fitWindow("timeline")
     }
+
+    # Fit timeline to show all events
+    fit_timeline()
   })
 }
 

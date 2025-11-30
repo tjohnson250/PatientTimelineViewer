@@ -24,12 +24,12 @@ aggregate_events <- function(events, level = "daily") {
       )
     )
   
-  # Separate events that should be aggregated (points) from those that shouldn't (ranges/death)
-  point_events <- events %>% 
-    filter(type == "point" & event_type != "death")
-  
-  other_events <- events %>% 
-    filter(type != "point" | event_type == "death") %>%
+  # Separate events that should be aggregated (box events) from those that shouldn't (ranges/death)
+  point_events <- events %>%
+    filter(type == "box" & event_type != "death")
+
+  other_events <- events %>%
+    filter(type != "box" | event_type == "death") %>%
     select(-any_of(c("period", "start_date")))
   
   if (nrow(point_events) == 0) {
@@ -95,7 +95,7 @@ aggregate_events <- function(events, level = "daily") {
         }
       }),
       end = NA_character_,
-      type = "point",
+      type = "box",
       title = sapply(1:n(), function(i) {
         if (count[i] == 1) {
           titles[[i]][1]

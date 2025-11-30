@@ -136,90 +136,114 @@ body {
 }
 
 .vis-item {
-  border-radius: 4px;
-  border: none;
-  font-size: 11px;
+  border-radius: 2px;
+  border-width: 1px;
+  border-style: solid;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.vis-item.vis-box {
+  border-radius: 2px;
+  padding: 2px 8px;
 }
 
 .vis-item.vis-point {
-  border-radius: 50%;
+  border-radius: 2px;
+  padding: 2px 8px;
 }
 
 .vis-item.vis-range {
-  border-radius: 4px;
+  border-radius: 2px;
+  padding: 4px 8px;
 }
 
-/* Event type colors */
+/* Event type colors - lighter, more subtle */
 .vis-item.event-encounter {
-  background-color: var(--color-encounter);
-  border-color: var(--color-encounter);
-  color: white;
+  background-color: #d4e4f7;
+  border-color: #a8c5e8;
+  color: #2c3e50;
 }
 
 .vis-item.event-diagnosis {
-  background-color: var(--color-diagnosis);
-  border-color: var(--color-diagnosis);
-  color: white;
+  background-color: #fadbd8;
+  border-color: #f5b7b1;
+  color: #2c3e50;
 }
 
 .vis-item.event-procedure {
-  background-color: var(--color-procedure);
-  border-color: var(--color-procedure);
-  color: white;
+  background-color: #e8daef;
+  border-color: #d2b4de;
+  color: #2c3e50;
 }
 
 .vis-item.event-lab {
-  background-color: var(--color-lab);
-  border-color: var(--color-lab);
-  color: white;
+  background-color: #d5f4e6;
+  border-color: #a9dfbf;
+  color: #2c3e50;
 }
 
 .vis-item.event-lab-abnormal {
-  background-color: var(--color-lab);
-  border: 2px solid #c0392b !important;
+  background-color: #fadbd8;
+  border: 2px solid #e74c3c !important;
+  color: #2c3e50;
 }
 
 .vis-item.event-prescribing {
-  background-color: var(--color-prescribing);
-  border-color: var(--color-prescribing);
-  color: white;
+  background-color: #fae5d3;
+  border-color: #f5cba7;
+  color: #2c3e50;
 }
 
 .vis-item.event-dispensing {
-  background-color: var(--color-dispensing);
-  border-color: var(--color-dispensing);
-  color: white;
+  background-color: #fdebd0;
+  border-color: #fad7a0;
+  color: #2c3e50;
 }
 
 .vis-item.event-vital {
-  background-color: var(--color-vital);
-  border-color: var(--color-vital);
-  color: white;
+  background-color: #d0ece7;
+  border-color: #a2d9ce;
+  color: #2c3e50;
 }
 
 .vis-item.event-condition {
-  background-color: var(--color-condition);
-  border-color: var(--color-condition);
-  color: white;
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+  color: #2c3e50;
 }
 
 /* Death marker - vertical line style */
 .vis-item.event-death {
-  background-color: var(--color-death);
-  border: 2px dashed var(--color-death);
-  color: white;
+  background-color: #d5d8dc;
+  border: 2px solid #85929e;
+  color: #2c3e50;
   font-weight: bold;
   z-index: 100;
 }
 
-/* Point events */
+/* Box events */
+.vis-item.vis-box .vis-item-content {
+  padding: 3px 8px;
+  line-height: 1.4;
+}
+
+/* Point events (legacy - box is preferred) */
 .vis-item.vis-point .vis-item-content {
-  padding: 2px 6px;
+  padding: 2px 8px;
+  line-height: 1.4;
+}
+
+/* Range events */
+.vis-item.vis-range .vis-item-content {
+  padding: 5px 8px;
+  line-height: 1.4;
 }
 
 /* Selected item */
 .vis-item.vis-selected {
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.5);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  border-width: 2px;
 }
 
 /* Timeline groups (rows) */

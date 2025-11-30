@@ -155,7 +155,7 @@ transform_encounters <- function(encounters) {
       start = start_char,
       end = end_char,
       group = "encounters",
-      type = ifelse(is.na(parsed_end), "point", "range"),
+      type = ifelse(is.na(parsed_end), "box", "range"),
       className = "event-encounter",
       title = create_tooltip(
         "Encounter Type" = ENC_TYPE,
@@ -223,7 +223,7 @@ transform_diagnoses <- function(diagnoses) {
       start = start_char,
       end = NA_character_,
       group = "diagnoses",
-      type = "point",
+      type = "box",
       className = "event-diagnosis",
       title = create_tooltip(
         "Diagnosis Code" = DX,
@@ -282,7 +282,7 @@ transform_procedures <- function(procedures) {
       start = start_char,
       end = NA_character_,
       group = "procedures",
-      type = "point",
+      type = "box",
       className = "event-procedure",
       title = create_tooltip(
         "Procedure Code" = PX,
@@ -396,7 +396,7 @@ transform_labs <- function(labs) {
       start = start_char,
       end = NA_character_,
       group = "labs",
-      type = "point",
+      type = "box",
       className = ifelse(!is.na(ABN_IND) & ABN_IND != "NI", 
                          "event-lab event-lab-abnormal", "event-lab"),
       title = create_tooltip(
@@ -475,7 +475,7 @@ transform_prescribing <- function(prescribing) {
       start = start_char,
       end = end_char,
       group = "prescribing",
-      type = ifelse(is.na(parsed_end), "point", "range"),
+      type = ifelse(is.na(parsed_end), "box", "range"),
       className = "event-prescribing",
       title = create_tooltip(
         "Medication" = RAW_RX_MED_NAME,
@@ -538,7 +538,7 @@ transform_dispensing <- function(dispensing) {
       start = start_char,
       end = NA_character_,
       group = "dispensing",
-      type = "point",
+      type = "box",
       className = "event-dispensing",
       title = create_tooltip(
         "Medication" = RAW_DISP_MED_NAME,
@@ -630,7 +630,7 @@ transform_vitals <- function(vitals) {
       start = start_char,
       end = NA_character_,
       group = "vitals",
-      type = "point",
+      type = "box",
       className = "event-vital",
       title = create_tooltip(
         "Date" = format(parsed_date, "%Y-%m-%d"),
@@ -697,7 +697,7 @@ transform_conditions <- function(conditions) {
       start = start_char,
       end = NA_character_,
       group = "conditions",
-      type = "point",
+      type = "box",
       className = "event-condition",
       title = create_tooltip(
         "Condition Code" = CONDITION,

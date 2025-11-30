@@ -193,9 +193,15 @@ ui <- fluidPage(
         ),
         column(3,
           div(
-            style = "text-align: right;",
+            class = "timeline-controls",
             actionButton("zoom_fit", "Fit All", icon = icon("expand"),
-                         class = "btn-sm btn-outline-secondary")
+                         class = "btn-sm btn-outline-secondary"),
+            actionButton("zoom_in", "", icon = icon("plus"),
+                         class = "btn-sm btn-outline-secondary",
+                         title = "Zoom in"),
+            actionButton("zoom_out", "", icon = icon("minus"),
+                         class = "btn-sm btn-outline-secondary",
+                         title = "Zoom out")
           )
         )
       ),
@@ -459,7 +465,7 @@ server <- function(input, output, session) {
       data = events,
       groups = get_timeline_groups(),
       options = config,
-      showZoom = TRUE
+      showZoom = FALSE
     )
   })
 
@@ -618,6 +624,28 @@ server <- function(input, output, session) {
   # Zoom controls
   observeEvent(input$zoom_fit, {
     fit_timeline()
+  })
+
+  observeEvent(input$zoom_in, {
+    shinyjs::runjs("
+      (function() {
+        var widget = HTMLWidgets.find('#timeline');
+        if (widget && widget.timeline) {
+          widget.timeline.zoomIn(0.2);
+        }
+      })();
+    ")
+  })
+
+  observeEvent(input$zoom_out, {
+    shinyjs::runjs("
+      (function() {
+        var widget = HTMLWidgets.find('#timeline');
+        if (widget && widget.timeline) {
+          widget.timeline.zoomOut(0.2);
+        }
+      })();
+    ")
   })
 
   # Show related events for encounter

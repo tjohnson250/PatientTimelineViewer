@@ -98,17 +98,32 @@ body {
 /* Event type checkboxes with colored indicators */
 .event-type-checkbox {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
   margin-right: 15px;
   margin-bottom: 8px;
+  gap: 6px;
 }
 
 .event-type-checkbox .color-indicator {
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   border-radius: 3px;
-  margin-right: 5px;
-  display: inline-block;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+.event-type-checkbox .checkbox-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.event-type-checkbox .checkbox-wrapper .form-group {
+  margin-bottom: 0;
+}
+
+.event-type-checkbox .checkbox-wrapper .checkbox {
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
 .color-indicator.encounters { background-color: var(--color-encounter); }
@@ -178,6 +193,13 @@ body {
   padding: 4px 8px;
 }
 
+/* Clustered items - base style */
+.vis-item.vis-cluster {
+  border-radius: 4px;
+  font-weight: 600;
+  padding: 4px 10px;
+}
+
 /* Event type colors - lighter, more subtle */
 .vis-item.event-encounter {
   background-color: #d4e4f7;
@@ -231,6 +253,104 @@ body {
   background-color: #f8d7da;
   border-color: #f5c6cb;
   color: #2c3e50;
+}
+
+/* Clustered event colors - use same lighter colors as individual events */
+.vis-item.vis-cluster.event-encounter {
+  background-color: #d4e4f7;
+  border-color: #a8c5e8;
+  color: #2c3e50;
+}
+
+.vis-item.vis-cluster.event-diagnosis {
+  background-color: #fadbd8;
+  border-color: #f5b7b1;
+  color: #2c3e50;
+}
+
+.vis-item.vis-cluster.event-procedure {
+  background-color: #e8daef;
+  border-color: #d2b4de;
+  color: #2c3e50;
+}
+
+.vis-item.vis-cluster.event-lab {
+  background-color: #d5f4e6;
+  border-color: #a9dfbf;
+  color: #2c3e50;
+}
+
+.vis-item.vis-cluster.event-prescribing {
+  background-color: #fae5d3;
+  border-color: #f5cba7;
+  color: #2c3e50;
+}
+
+.vis-item.vis-cluster.event-dispensing {
+  background-color: #fdebd0;
+  border-color: #fad7a0;
+  color: #2c3e50;
+}
+
+.vis-item.vis-cluster.event-vital {
+  background-color: #d0ece7;
+  border-color: #a2d9ce;
+  color: #2c3e50;
+}
+
+.vis-item.vis-cluster.event-condition {
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+  color: #2c3e50;
+}
+
+/* Alternative: Color clusters by group (row) they appear in - also using lighter colors */
+.vis-item.vis-cluster[data-group="encounters"] {
+  background-color: #d4e4f7 !important;
+  border-color: #a8c5e8 !important;
+  color: #2c3e50 !important;
+}
+
+.vis-item.vis-cluster[data-group="diagnoses"] {
+  background-color: #fadbd8 !important;
+  border-color: #f5b7b1 !important;
+  color: #2c3e50 !important;
+}
+
+.vis-item.vis-cluster[data-group="procedures"] {
+  background-color: #e8daef !important;
+  border-color: #d2b4de !important;
+  color: #2c3e50 !important;
+}
+
+.vis-item.vis-cluster[data-group="labs"] {
+  background-color: #d5f4e6 !important;
+  border-color: #a9dfbf !important;
+  color: #2c3e50 !important;
+}
+
+.vis-item.vis-cluster[data-group="prescribing"] {
+  background-color: #fae5d3 !important;
+  border-color: #f5cba7 !important;
+  color: #2c3e50 !important;
+}
+
+.vis-item.vis-cluster[data-group="dispensing"] {
+  background-color: #fdebd0 !important;
+  border-color: #fad7a0 !important;
+  color: #2c3e50 !important;
+}
+
+.vis-item.vis-cluster[data-group="vitals"] {
+  background-color: #d0ece7 !important;
+  border-color: #a2d9ce !important;
+  color: #2c3e50 !important;
+}
+
+.vis-item.vis-cluster[data-group="conditions"] {
+  background-color: #f8d7da !important;
+  border-color: #f5c6cb !important;
+  color: #2c3e50 !important;
 }
 
 /* Death marker - vertical line style */

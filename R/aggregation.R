@@ -65,9 +65,26 @@ aggregate_events <- function(events, level = "daily") {
 
   # Build aggregated data frame manually
   agg_list <- lapply(split_events, function(df) {
+    # Extract base className (remove modifiers like event-lab-abnormal)
+    # Use event_type to construct consistent className
+    event_type <- df$event_type[1]
+    base_class <- paste0("event-", gsub("_", "-", event_type))
+    # Map event_type to className
+    base_class <- switch(event_type,
+      "encounter" = "event-encounter",
+      "diagnosis" = "event-diagnosis",
+      "procedure" = "event-procedure",
+      "lab" = "event-lab",
+      "prescribing" = "event-prescribing",
+      "dispensing" = "event-dispensing",
+      "vital" = "event-vital",
+      "condition" = "event-condition",
+      df$className[1]  # fallback to first className
+    )
+
     data.frame(
       group = df$group[1],
-      event_type = df$event_type[1],
+      event_type = event_type,
       period_key = df$period_key[1],
       count = nrow(df),
       ids = I(list(df$id)),
@@ -76,7 +93,7 @@ aggregate_events <- function(events, level = "daily") {
       source_keys = I(list(df$source_key)),
       start = df$start[1],  # Take first start
       source_table = df$source_table[1],
-      className = df$className[1],
+      className = base_class,
       stringsAsFactors = FALSE
     )
   })

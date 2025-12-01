@@ -21,15 +21,75 @@ source("R/filter_helpers.R")
 ui <- fluidPage(
   useShinyjs(),
   
-  # Include custom CSS
+  # Include custom CSS and JavaScript
   tags$head(
     tags$link(rel = "stylesheet", type = "text/css", href = "custom.css"),
+    tags$script(src = "cluster-colors.js"),
     tags$style(HTML("
       .shiny-notification {
         position: fixed;
         top: 60px;
         right: 20px;
       }
+      .help-icon {
+        margin-left: 5px;
+        color: #7f8c8d;
+        cursor: help;
+        font-size: 14px;
+      }
+      .help-icon:hover {
+        color: #5a6268;
+      }
+    ")),
+    tags$script(HTML("
+      // Preserve timeline window when re-rendering
+      var savedTimelineWindow = null;
+
+      // Save window before timeline updates
+      $(document).on('shiny:inputchanged', function(event) {
+        // Save window when clustering or aggregation changes
+        if (event.name === 'enable_clustering' || event.name === 'aggregation') {
+          var widget = HTMLWidgets.find('#timeline');
+          if (widget && widget.timeline) {
+            var window = widget.timeline.getWindow();
+            savedTimelineWindow = {
+              start: window.start.getTime(),
+              end: window.end.getTime()
+            };
+            console.log('Saved timeline window for', event.name, ':', savedTimelineWindow);
+          }
+        }
+      });
+
+      // Restore window after timeline renders
+      $(document).on('shiny:value', function(event) {
+        if (event.name === 'timeline' && savedTimelineWindow) {
+          setTimeout(function() {
+            var widget = HTMLWidgets.find('#timeline');
+            if (widget && widget.timeline) {
+              widget.timeline.setWindow(
+                new Date(savedTimelineWindow.start),
+                new Date(savedTimelineWindow.end),
+                {animation: false}
+              );
+              console.log('Restored timeline window');
+              savedTimelineWindow = null;
+            }
+          }, 100);
+        }
+      });
+
+      // Initialize Bootstrap tooltips
+      $(document).ready(function() {
+        $('[data-toggle=\"tooltip\"]').tooltip();
+      });
+
+      // Re-initialize tooltips when UI updates
+      $(document).on('shiny:value', function(event) {
+        setTimeout(function() {
+          $('[data-toggle=\"tooltip\"]').tooltip();
+        }, 100);
+      });
     "))
   ),
   
@@ -74,24 +134,7 @@ ui <- fluidPage(
     div(
       class = "filter-panel",
       h4("Display Options"),
-      
-      # Aggregation radio buttons
-      fluidRow(
-        column(12,
-          radioButtons(
-            "aggregation",
-            label = "Aggregation:",
-            choices = c(
-              "Individual" = "individual",
-              "Daily" = "daily",
-              "Weekly" = "weekly"
-            ),
-            selected = "daily",
-            inline = TRUE
-          )
-        )
-      ),
-      
+
       # Event type checkboxes
       fluidRow(
         column(12,
@@ -178,6 +221,47 @@ ui <- fluidPage(
                 style = "margin-top: 25px;"
               )
             )
+          )
+        )
+      ),
+
+      # Aggregation and clustering controls
+      fluidRow(
+        style = "margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;",
+        column(8,
+          radioButtons(
+            "aggregation",
+            label = tags$span(
+              "Aggregation:",
+              tags$i(
+                class = "fa fa-question-circle help-icon",
+                `data-toggle` = "tooltip",
+                `data-placement` = "top",
+                title = "Aggregates events before creating the timeline. Individual shows every event separately, Daily combines events of the same type on the same date, Weekly groups by ISO week."
+              )
+            ),
+            choices = c(
+              "Individual" = "individual",
+              "Daily" = "daily",
+              "Weekly" = "weekly"
+            ),
+            selected = "daily",
+            inline = TRUE
+          )
+        ),
+        column(4,
+          checkboxInput(
+            "enable_clustering",
+            label = tags$span(
+              "Enable auto-clustering",
+              tags$i(
+                class = "fa fa-question-circle help-icon",
+                `data-toggle` = "tooltip",
+                `data-placement` = "top",
+                title = "Dynamically aggregates events as you zoom in and out of the timeline for better performance with large datasets."
+              )
+            ),
+            value = TRUE
           )
         )
       )
@@ -381,11 +465,14 @@ server <- function(input, output, session) {
       tags$div(
         class = "event-type-checkbox",
         tags$span(class = paste("color-indicator", type)),
-        checkboxInput(
-          inputId = paste0("show_", type),
-          label = paste0(event_types[[type]], " (", count, ")"),
-          value = TRUE,
-          width = "auto"
+        tags$div(
+          class = "checkbox-wrapper",
+          checkboxInput(
+            inputId = paste0("show_", type),
+            label = paste0(event_types[[type]], " (", count, ")"),
+            value = TRUE,
+            width = "auto"
+          )
         )
       )
     })
@@ -461,6 +548,15 @@ server <- function(input, output, session) {
       zoomable = TRUE
     )
 
+    # Add clustering if enabled
+    if (isTRUE(input$enable_clustering)) {
+      config$cluster <- list(
+        maxItems = 1,
+        showStipes = TRUE,
+        titleTemplate = "{count} items"
+      )
+    }
+
     timevis(
       data = events,
       groups = get_timeline_groups(),
@@ -472,21 +568,21 @@ server <- function(input, output, session) {
   # Handle timeline event selection
   observeEvent(input$timeline_selected, {
     selected_id <- input$timeline_selected
-    
+
     if (is.null(selected_id) || length(selected_id) == 0) {
       rv$selected_event <- NULL
       return()
     }
-    
+
     # Find the selected event
     events <- filtered_events()
     selected <- events %>% filter(id == selected_id)
-    
+
     if (nrow(selected) == 0) {
       rv$selected_event <- NULL
       return()
     }
-    
+
     rv$selected_event <- as.list(selected[1, ])
   })
   
@@ -509,7 +605,7 @@ server <- function(input, output, session) {
     if (is.null(rv$selected_event)) {
       return(p(class = "text-muted", "Click an event on the timeline to view details."))
     }
-    
+
     event <- rv$selected_event
     
     # Get the full record from raw data
@@ -573,18 +669,14 @@ server <- function(input, output, session) {
     )
   })
   
-  # Clear filters button
+  # Clear advanced filters button
   observeEvent(input$clear_filters, {
+    # Clear only the advanced filter fields
     updateTextInput(session, "dx_pattern", value = "")
     updateTextInput(session, "px_pattern", value = "")
     updateTextInput(session, "lab_name", value = "")
     updateTextInput(session, "med_name", value = "")
     updateSelectInput(session, "enc_type_filter", selected = "ALL")
-    
-    if (!is.null(rv$date_range)) {
-      updateDateInput(session, "date_start", value = rv$date_range$min)
-      updateDateInput(session, "date_end", value = rv$date_range$max)
-    }
   })
   
   # Helper function to fit timeline window

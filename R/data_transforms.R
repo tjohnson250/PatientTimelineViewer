@@ -218,8 +218,14 @@ transform_diagnoses <- function(diagnoses) {
         PDX == "X" ~ "Unable to classify",
         TRUE ~ as.character(PDX)
       ),
+      # Use description if available, otherwise fall back to code
+      dx_display = if (!is.na(RAW_DX) && RAW_DX != "") {
+        as.character(RAW_DX)
+      } else {
+        as.character(DX)
+      },
       id = paste0("DX_", DIAGNOSISID),
-      content = as.character(DX),
+      content = dx_display,
       start = start_char,
       end = NA_character_,
       group = "diagnoses",
@@ -277,8 +283,14 @@ transform_procedures <- function(procedures) {
   procedures %>%
     rowwise() %>%
     mutate(
+      # Use description if available, otherwise fall back to code
+      px_display = if (!is.na(RAW_PX_NAME) && RAW_PX_NAME != "") {
+        as.character(RAW_PX_NAME)
+      } else {
+        as.character(PX)
+      },
       id = paste0("PX_", PROCEDURESID),
-      content = as.character(PX),
+      content = px_display,
       start = start_char,
       end = NA_character_,
       group = "procedures",
@@ -692,8 +704,14 @@ transform_conditions <- function(conditions) {
         CONDITION_STATUS == "IN" ~ "Inactive",
         TRUE ~ as.character(CONDITION_STATUS)
       ),
+      # Use description if available, otherwise fall back to code
+      cond_display = if (!is.na(RAW_CONDITION) && RAW_CONDITION != "") {
+        as.character(RAW_CONDITION)
+      } else {
+        as.character(CONDITION)
+      },
       id = paste0("COND_", CONDITIONID),
-      content = as.character(CONDITION),
+      content = cond_display,
       start = start_char,
       end = NA_character_,
       group = "conditions",

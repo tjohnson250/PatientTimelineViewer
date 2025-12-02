@@ -273,7 +273,7 @@ ui <- fluidPage(
       fluidRow(
         column(9,
           h4("Timeline", style = "margin: 0 0 5px 0;"),
-          p(class = "timeline-hint", "Scroll to zoom • Click and drag to pan")
+          p(class = "timeline-hint", "Scroll to zoom • Click and drag to pan • Double-click an event to zoom in")
         ),
         column(3,
           div(

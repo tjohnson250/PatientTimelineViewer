@@ -25,15 +25,22 @@
     console.log('DOM: Found', clusters.length, 'cluster elements');
 
     clusters.forEach(function(clusterElement) {
-      // Remove any existing event-* classes first to avoid conflicts
+      // Skip if already has event class
+      var hasEventClass = false;
       var existingClasses = clusterElement.className.split(' ');
       existingClasses.forEach(function(cls) {
         if (cls.startsWith('event-')) {
-          clusterElement.classList.remove(cls);
+          hasEventClass = true;
         }
       });
 
+      // If already has event class, don't reprocess
+      if (hasEventClass) {
+        return;
+      }
+
       var groupName = null;
+      var eventClass = null;
 
       // Method 1: Look for non-cluster items with same 'top' style value
       // Clusters and regular items in the same group have the same CSS top value
@@ -47,28 +54,18 @@
             var classes = item.className.split(' ');
             for (var j = 0; j < classes.length; j++) {
               if (classes[j].startsWith('event-')) {
-                // Extract group name from event class
-                var eventClass = classes[j];
+                eventClass = classes[j];
                 console.log('DOM: Found same-row item with class:', eventClass);
-
-                // Reverse lookup: find group name from event class
-                for (var grp in groupToEventClass) {
-                  if (groupToEventClass[grp] === eventClass) {
-                    groupName = grp;
-                    console.log('DOM: Determined group:', groupName);
-                    break;
-                  }
-                }
                 break;
               }
             }
-            if (groupName) break;
+            if (eventClass) break;
           }
         }
       }
 
-      // Method 2: If still no group, try position-based detection with better logic
-      if (!groupName) {
+      // Method 2: If still no event class, try position-based detection with better logic
+      if (!eventClass) {
         var rect = clusterElement.getBoundingClientRect();
         var clusterCenterY = rect.top + (rect.height / 2);
 
@@ -90,17 +87,20 @@
         if (closestLabel) {
           var labelText = closestLabel.textContent.trim().toLowerCase();
           groupName = labelText;
+          eventClass = groupToEventClass[groupName];
           console.log('DOM: Found group via closest label:', groupName, 'distance:', closestDistance);
         }
       }
 
-      // Apply the appropriate event class based on group
-      if (groupName && groupToEventClass[groupName]) {
-        console.log('DOM: Applying', groupToEventClass[groupName], 'to cluster');
-        clusterElement.classList.add(groupToEventClass[groupName]);
-        clusterElement.setAttribute('data-group', groupName);
+      // Apply the appropriate event class
+      if (eventClass) {
+        console.log('DOM: Applying', eventClass, 'to cluster');
+        clusterElement.classList.add(eventClass);
+        if (groupName) {
+          clusterElement.setAttribute('data-group', groupName);
+        }
       } else {
-        console.log('DOM: Could not determine group for cluster (groupName:', groupName, ')');
+        console.log('DOM: Could not determine event class for cluster');
       }
     });
   }
@@ -181,10 +181,39 @@
 
         // Apply on various events
         widget.timeline.on('changed', applyClusterColors);
-        widget.timeline.on('rangechanged', applyClusterColors);
+        widget.timeline.on('rangechanged', function() {
+          // Apply colors after a short delay to let timeline finish rendering
+          setTimeout(applyClusterColors, 100);
+        });
 
         // Initial application
         applyClusterColors();
+
+        // Set up a MutationObserver to watch for DOM changes
+        var timelineElement = document.querySelector('.vis-timeline');
+        if (timelineElement) {
+          var observer = new MutationObserver(function(mutations) {
+            var hasClusterChanges = false;
+            mutations.forEach(function(mutation) {
+              if (mutation.addedNodes.length > 0) {
+                mutation.addedNodes.forEach(function(node) {
+                  if (node.classList && node.classList.contains('vis-cluster')) {
+                    hasClusterChanges = true;
+                  }
+                });
+              }
+            });
+            if (hasClusterChanges) {
+              console.log('MutationObserver: Detected cluster DOM changes, reapplying colors');
+              setTimeout(applyClusterColorsDom, 50);
+            }
+          });
+
+          observer.observe(timelineElement, {
+            childList: true,
+            subtree: true
+          });
+        }
       }
     }, 300);
   }

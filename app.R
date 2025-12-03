@@ -16,6 +16,16 @@ source("R/db_queries.R")
 source("R/data_transforms.R")
 source("R/aggregation.R")
 source("R/filter_helpers.R")
+source("R/semantic_filter.R")
+
+# Check for Anthropic API key (warn if not present)
+if (Sys.getenv("ANTHROPIC_API_KEY") == "") {
+  warning(
+    "ANTHROPIC_API_KEY environment variable not set.\n",
+    "Semantic filtering feature will not work without it.\n",
+    "Set the key in your .Renviron file or environment before using AI-powered filters."
+  )
+}
 
 # UI Definition
 ui <- fluidPage(
@@ -129,7 +139,72 @@ ui <- fluidPage(
   # Main content (conditional on patient loaded)
   conditionalPanel(
     condition = "output.patient_loaded",
-    
+
+    # Semantic filter panel
+    div(
+      class = "filter-panel",
+      style = "background-color: #f8f9fa; border-left: 4px solid #3498db;",
+      h4(
+        icon("magic"), " AI-Powered Filter",
+        tags$i(
+          class = "fa fa-question-circle help-icon",
+          `data-toggle` = "tooltip",
+          `data-placement` = "top",
+          title = "Ask questions in plain English like 'Show encounters with A1c > 9' or 'Show inpatient encounters from 2023'"
+        )
+      ),
+
+      fluidRow(
+        column(9,
+          textInput(
+            "semantic_query",
+            label = NULL,
+            placeholder = "e.g., Show encounters with A1c > 9, Show only inpatient encounters, Show diagnoses containing diabetes...",
+            width = "100%"
+          )
+        ),
+        column(3,
+          div(
+            style = "display: flex; gap: 5px;",
+            actionButton(
+              "apply_semantic_filter",
+              "Apply",
+              class = "btn-primary",
+              icon = icon("search"),
+              style = "flex: 1;"
+            ),
+            actionButton(
+              "clear_semantic_filter",
+              "Clear",
+              class = "btn-secondary",
+              icon = icon("times"),
+              style = "flex: 1;"
+            )
+          )
+        )
+      ),
+
+      # Status/error message area
+      uiOutput("semantic_filter_status"),
+
+      # Collapsible SQL display panel
+      conditionalPanel(
+        condition = "output.show_generated_sql",
+        tags$details(
+          class = "generated-sql-panel",
+          style = "margin-top: 10px;",
+          tags$summary(
+            style = "cursor: pointer; font-weight: 600; color: #7f8c8d; padding: 5px;",
+            icon("code"), " View Generated SQL"
+          ),
+          div(
+            style = "padding: 10px; background-color: #2c3e50; color: #ecf0f1; border-radius: 4px; font-family: monospace; font-size: 12px; overflow-x: auto; margin-top: 5px;",
+            uiOutput("generated_sql")
+          )
+        )
+      )
+    ),
+
     # Display options panel
     div(
       class = "filter-panel",
@@ -341,7 +416,11 @@ server <- function(input, output, session) {
     timeline_events = NULL,
     selected_event = NULL,
     db_connections = NULL,
-    date_range = NULL
+    date_range = NULL,
+    semantic_filter_active = FALSE,
+    semantic_filter_sql = NULL,
+    semantic_filter_table = NULL,
+    semantic_filter_results = NULL
   )
   
   # Output to control conditional panels
@@ -497,7 +576,7 @@ server <- function(input, output, session) {
   # Filtered and aggregated events
   filtered_events <- reactive({
     req(rv$timeline_events)
-    
+
     # Collect filter values
     filters <- list(
       event_types = get_selected_event_types(),
@@ -506,15 +585,17 @@ server <- function(input, output, session) {
       dx_pattern = input$dx_pattern,
       px_pattern = input$px_pattern,
       lab_name = input$lab_name,
-      med_name = input$med_name
+      med_name = input$med_name,
+      semantic_results = if (rv$semantic_filter_active) rv$semantic_filter_results else NULL,
+      semantic_table = if (rv$semantic_filter_active) rv$semantic_filter_table else NULL
     )
-    
+
     # Apply filters
     events <- apply_all_filters(rv$timeline_events, rv$patient_data, filters)
-    
+
     # Apply aggregation
     events <- aggregate_events(events, input$aggregation)
-    
+
     events
   })
   
@@ -678,6 +759,143 @@ server <- function(input, output, session) {
     updateTextInput(session, "med_name", value = "")
     updateSelectInput(session, "enc_type_filter", selected = "ALL")
   })
+
+  # Semantic filter: Apply button
+  observeEvent(input$apply_semantic_filter, {
+    req(input$semantic_query)
+    req(rv$db_connections)
+    req(input$patid)
+
+    patid <- trimws(input$patid)
+    query <- trimws(input$semantic_query)
+
+    if (query == "") {
+      showNotification("Please enter a query", type = "warning")
+      return()
+    }
+
+    # Disable button while processing
+    shinyjs::disable("apply_semantic_filter")
+
+    # Show loading status
+    output$semantic_filter_status <- renderUI({
+      div(
+        style = "margin-top: 10px; padding: 8px; background-color: #d1ecf1; border-left: 3px solid #0c5460; color: #0c5460;",
+        icon("spinner", class = "fa-spin"), " Generating SQL query..."
+      )
+    })
+
+    tryCatch({
+      # Get database type
+      db_type <- rv$db_connections$db_type
+
+      # Apply semantic filter
+      result <- apply_semantic_filter(
+        natural_query = query,
+        patid = patid,
+        db_conn = rv$db_connections$cdw,
+        db_type = db_type
+      )
+
+      if (!is.null(result$error)) {
+        # Show error
+        output$semantic_filter_status <- renderUI({
+          div(
+            style = "margin-top: 10px; padding: 8px; background-color: #f8d7da; border-left: 3px solid #721c24; color: #721c24;",
+            icon("exclamation-triangle"), " Error: ", result$error
+          )
+        })
+        rv$semantic_filter_active <- FALSE
+        rv$semantic_filter_sql <- NULL
+
+      } else {
+        # Show success
+        rv$semantic_filter_active <- TRUE
+        rv$semantic_filter_sql <- result$sql
+        rv$semantic_filter_results <- result$filtered_data
+
+        # Detect which table(s) were queried
+        sql_upper <- toupper(result$sql)
+        detected_table <- NULL
+
+        # Check for UNION of prescribing and dispensing (medication queries)
+        has_prescribing <- grepl("FROM.*PRESCRIBING", sql_upper)
+        has_dispensing <- grepl("FROM.*DISPENSING", sql_upper)
+
+        if (has_prescribing && has_dispensing && grepl("UNION", sql_upper)) {
+          detected_table <- "medications"  # Special case for combined medication search
+        } else if (grepl("FROM.*ENCOUNTER", sql_upper)) {
+          detected_table <- "encounters"
+        } else if (grepl("FROM.*DIAGNOSIS", sql_upper)) {
+          detected_table <- "diagnoses"
+        } else if (grepl("FROM.*PROCEDURES", sql_upper)) {
+          detected_table <- "procedures"
+        } else if (grepl("FROM.*LAB_RESULT_CM", sql_upper)) {
+          detected_table <- "labs"
+        } else if (has_prescribing) {
+          detected_table <- "prescribing"
+        } else if (has_dispensing) {
+          detected_table <- "dispensing"
+        } else if (grepl("FROM.*VITAL", sql_upper)) {
+          detected_table <- "vitals"
+        } else if (grepl("FROM.*CONDITION", sql_upper)) {
+          detected_table <- "conditions"
+        }
+
+        rv$semantic_filter_table <- detected_table
+
+        output$semantic_filter_status <- renderUI({
+          div(
+            style = "margin-top: 10px; padding: 8px; background-color: #d4edda; border-left: 3px solid #155724; color: #155724;",
+            icon("check-circle"), " ", result$message,
+            if (!is.null(detected_table)) {
+              paste0(" from ", detected_table)
+            }
+          )
+        })
+
+        # Display generated SQL
+        output$generated_sql <- renderUI({
+          pre(style = "margin: 0; white-space: pre-wrap; word-wrap: break-word;", result$sql)
+        })
+      }
+
+    }, error = function(e) {
+      output$semantic_filter_status <- renderUI({
+        div(
+          style = "margin-top: 10px; padding: 8px; background-color: #f8d7da; border-left: 3px solid #721c24; color: #721c24;",
+          icon("exclamation-triangle"), " Error: ", e$message
+        )
+      })
+      rv$semantic_filter_active <- FALSE
+      rv$semantic_filter_sql <- NULL
+    })
+
+    # Re-enable button
+    shinyjs::enable("apply_semantic_filter")
+  })
+
+  # Semantic filter: Clear button
+  observeEvent(input$clear_semantic_filter, {
+    # Reset semantic filter state
+    rv$semantic_filter_active <- FALSE
+    rv$semantic_filter_sql <- NULL
+    rv$semantic_filter_table <- NULL
+    rv$semantic_filter_results <- NULL
+
+    # Clear UI elements
+    updateTextInput(session, "semantic_query", value = "")
+    output$semantic_filter_status <- renderUI(NULL)
+    output$generated_sql <- renderUI(NULL)
+
+    showNotification("Semantic filter cleared", type = "message")
+  })
+
+  # Output to control SQL display panel visibility
+  output$show_generated_sql <- reactive({
+    !is.null(rv$semantic_filter_sql)
+  })
+  outputOptions(output, "show_generated_sql", suspendWhenHidden = FALSE)
   
   # Helper function to fit timeline window
   fit_timeline <- function() {

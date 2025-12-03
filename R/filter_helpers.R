@@ -220,6 +220,88 @@ get_encounter_types <- function(encounters) {
   sort(enc_types)
 }
 
+#' Filter events by semantic filter results
+#' @param events Data frame of timeline events
+#' @param semantic_results Data frame from semantic SQL query
+#' @param table_name Which table was queried (encounters, diagnoses, etc., or "medications" for UNION)
+#' @return Filtered data frame
+filter_by_semantic_results <- function(events, semantic_results, table_name) {
+  if (is.null(semantic_results) || is.null(table_name) || nrow(semantic_results) == 0) {
+    return(events)
+  }
+
+  # Special case: "medications" means UNION of prescribing and dispensing
+  if (table_name == "medications") {
+    # The UNION query returns results with a SOURCE_TABLE column and ID column
+    # Extract IDs for each table type
+    rx_ids <- c()
+    disp_ids <- c()
+
+    if ("SOURCE_TABLE" %in% names(semantic_results)) {
+      # Results have SOURCE_TABLE indicator
+      rx_rows <- semantic_results[semantic_results$SOURCE_TABLE == "prescribing", ]
+      disp_rows <- semantic_results[semantic_results$SOURCE_TABLE == "dispensing", ]
+
+      if (nrow(rx_rows) > 0 && "ID" %in% names(rx_rows)) {
+        rx_ids <- rx_rows$ID
+      }
+      if (nrow(disp_rows) > 0 && "ID" %in% names(disp_rows)) {
+        disp_ids <- disp_rows$ID
+      }
+    } else {
+      # Fallback: try to detect by column names
+      if ("PRESCRIBINGID" %in% names(semantic_results)) {
+        rx_ids <- semantic_results$PRESCRIBINGID
+      }
+      if ("DISPENSINGID" %in% names(semantic_results)) {
+        disp_ids <- semantic_results$DISPENSINGID
+      }
+    }
+
+    # Filter to show only matching prescribing and dispensing events
+    return(events %>%
+      filter(
+        (event_type == "prescribing" & source_key %in% rx_ids) |
+        (event_type == "dispensing" & source_key %in% disp_ids)
+      ))
+  }
+
+  # Map table names to event types and ID columns
+  table_mapping <- list(
+    encounters = list(event_type = "encounter", id_col = "ENCOUNTERID", source_key_col = "source_key"),
+    diagnoses = list(event_type = "diagnosis", id_col = "DIAGNOSISID", source_key_col = "source_key"),
+    procedures = list(event_type = "procedure", id_col = "PROCEDURESID", source_key_col = "source_key"),
+    labs = list(event_type = "lab", id_col = "LAB_RESULT_CM_ID", source_key_col = "source_key"),
+    prescribing = list(event_type = "prescribing", id_col = "PRESCRIBINGID", source_key_col = "source_key"),
+    dispensing = list(event_type = "dispensing", id_col = "DISPENSINGID", source_key_col = "source_key"),
+    vitals = list(event_type = "vital", id_col = "VITALID", source_key_col = "source_key"),
+    conditions = list(event_type = "condition", id_col = "CONDITIONID", source_key_col = "source_key")
+  )
+
+  mapping <- table_mapping[[table_name]]
+  if (is.null(mapping)) {
+    warning(paste("Unknown table name for semantic filter:", table_name))
+    return(events)
+  }
+
+  # Get IDs from semantic results
+  if (!mapping$id_col %in% names(semantic_results)) {
+    warning(paste("ID column", mapping$id_col, "not found in semantic results"))
+    return(events)
+  }
+
+  matching_ids <- semantic_results[[mapping$id_col]]
+
+  # Filter events: ONLY keep events of the target type that match the semantic results
+  # This means when a semantic filter is active, we hide all other event types
+  # and only show the filtered results from the queried table
+  events %>%
+    filter(
+      event_type == mapping$event_type &
+      source_key %in% matching_ids
+    )
+}
+
 #' Apply all filters to events
 #' @param events Data frame of timeline events
 #' @param patient_data Full patient data list
@@ -227,37 +309,42 @@ get_encounter_types <- function(encounters) {
 #' @return Filtered data frame
 apply_all_filters <- function(events, patient_data, filters) {
   result <- events
-  
+
+  # Semantic filter (applied first, if active)
+  if (!is.null(filters$semantic_results) && !is.null(filters$semantic_table)) {
+    result <- filter_by_semantic_results(result, filters$semantic_results, filters$semantic_table)
+  }
+
   # Event type filter
   if (!is.null(filters$event_types)) {
     result <- filter_by_event_type(result, filters$event_types)
   }
-  
+
   # Date range filter
   if (!is.null(filters$start_date) || !is.null(filters$end_date)) {
     result <- filter_by_date_range(result, filters$start_date, filters$end_date)
   }
-  
+
   # Diagnosis pattern filter
   if (!is.null(filters$dx_pattern) && filters$dx_pattern != "") {
     result <- filter_by_dx_pattern(result, patient_data, filters$dx_pattern)
   }
-  
+
   # Procedure pattern filter
   if (!is.null(filters$px_pattern) && filters$px_pattern != "") {
     result <- filter_by_px_pattern(result, patient_data, filters$px_pattern)
   }
-  
+
   # Lab name filter
   if (!is.null(filters$lab_name) && filters$lab_name != "") {
     result <- filter_by_lab_name(result, patient_data, filters$lab_name)
   }
-  
+
   # Medication name filter
   if (!is.null(filters$med_name) && filters$med_name != "") {
     result <- filter_by_med_name(result, patient_data, filters$med_name)
   }
-  
+
   result
 }
 

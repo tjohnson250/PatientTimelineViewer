@@ -77,6 +77,28 @@ body {
   margin-bottom: 3px;
 }
 
+/* Death indicator in demographics */
+.demographics-panel .demo-row.death-indicator {
+  background-color: #f8d7da !important;
+  border-left: 4px solid #d32f2f !important;
+  padding: 10px 12px !important;
+  margin-top: 10px !important;
+  margin-bottom: 10px !important;
+  margin-left: -5px !important;
+  margin-right: -5px !important;
+  border-radius: 4px !important;
+}
+
+.demographics-panel .demo-row.death-indicator .demo-label {
+  color: #721c24 !important;
+  font-weight: 700 !important;
+}
+
+.demographics-panel .demo-row.death-indicator .demo-value {
+  color: #721c24 !important;
+  font-weight: 600 !important;
+}
+
 /* Filter panels */
 .filter-panel {
   background-color: var(--bg-secondary);
@@ -360,6 +382,40 @@ body {
   color: #2c3e50;
   font-weight: bold;
   z-index: 100;
+}
+
+/* Birth date marker - vertical line using customTime */
+.vis-custom-time.birth-marker {
+  background-color: #4caf50;
+  width: 3px;
+  cursor: default;
+  z-index: 50;
+}
+
+.vis-custom-time.birth-marker .vis-custom-time-marker {
+  background-color: #4caf50;
+  color: white;
+  padding: 3px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Death date marker - vertical line using customTime */
+.vis-custom-time.death-marker {
+  background-color: #d32f2f;
+  width: 3px;
+  cursor: default;
+  z-index: 60;
+}
+
+.vis-custom-time.death-marker .vis-custom-time-marker {
+  background-color: #d32f2f;
+  color: white;
+  padding: 3px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 /* Box events */

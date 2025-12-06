@@ -771,6 +771,41 @@ transform_death <- function(death) {
   )
 }
 
+#' Create birth date marker for timeline
+#' @param demographic Data frame from query_demographic
+#' @return Data frame in timevis format (background type spanning all groups)
+transform_birth_date <- function(demographic) {
+  if (is.null(demographic) || nrow(demographic) == 0 || is.na(demographic$BIRTH_DATE[1])) {
+    return(data.frame(
+      id = character(), content = character(), start = character(),
+      end = character(), group = character(), type = character(),
+      className = character(), title = character(), source_table = character(),
+      source_key = character(), event_type = character(),
+      stringsAsFactors = FALSE
+    ))
+  }
+
+  birth_date <- safe_parse_date(demographic$BIRTH_DATE[1])
+  birth_date_str <- format(birth_date, "%Y-%m-%d")
+
+  data.frame(
+    id = "BIRTH_MARKER",
+    content = "",  # No content for background markers
+    start = birth_date_str,
+    end = birth_date_str,
+    group = NA_character_,  # NA means spans all groups
+    type = "background",  # Background type creates a vertical line
+    className = "event-birth",
+    title = create_tooltip(
+      "Birth Date" = birth_date_str
+    ),
+    source_table = "DEMOGRAPHIC",
+    source_key = as.character(demographic$PATID[1]),
+    event_type = "birth",
+    stringsAsFactors = FALSE
+  )
+}
+
 #' Transform all patient data to timevis format
 #' @param patient_data List of patient data frames
 #' @return Data frame with all events in timevis format
@@ -863,17 +898,30 @@ calculate_age <- function(birth_date, ref_date = Sys.Date()) {
 #' @param demographic Data frame with demographic info
 #' @param source_systems Data frame with source system mappings
 #' @param total_events Total event count
+#' @param death Data frame with death info (optional)
 #' @return HTML string for demographic display
-format_demographic_html <- function(demographic, source_systems, total_events) {
+format_demographic_html <- function(demographic, source_systems, total_events, death = NULL) {
   if (is.null(demographic) || nrow(demographic) == 0) {
     return("<p>No demographic data available</p>")
   }
-  
+
   d <- demographic[1, ]
-  
-  # Calculate age
-  age <- calculate_age(d$BIRTH_DATE)
-  age_str <- if (!is.na(age)) paste0(" (Age ", age, ")") else ""
+
+  # Calculate age (use death date if available, otherwise current date)
+  death_date <- NULL
+  if (!is.null(death) && nrow(death) > 0 && !is.na(death$DEATH_DATE[1])) {
+    death_date <- safe_parse_date(death$DEATH_DATE[1])
+  }
+
+  ref_date <- if (!is.null(death_date)) death_date else Sys.Date()
+  age <- calculate_age(d$BIRTH_DATE, ref_date)
+
+  # Format age string differently if deceased
+  if (!is.null(death_date)) {
+    age_str <- if (!is.na(age)) paste0(" (Age at death: ", age, ")") else ""
+  } else {
+    age_str <- if (!is.na(age)) paste0(" (Age ", age, ")") else ""
+  }
   
   # Sex mapping
   sex <- case_when(
@@ -930,25 +978,43 @@ format_demographic_html <- function(demographic, source_systems, total_events) {
     )
   }
   
+  # Format death date row if available
+  death_row <- ""
+  if (!is.null(death_date)) {
+    death_source <- if (!is.null(death) && !is.na(death$DEATH_SOURCE[1])) {
+      paste0(" (Source: ", death$DEATH_SOURCE[1], ")")
+    } else {
+      ""
+    }
+    death_row <- paste0(
+      "<div class='demo-row death-indicator' style='background-color: #f8d7da; border-left: 4px solid #d32f2f; padding: 10px 12px; margin: 10px -5px; border-radius: 4px;'>",
+      "<span class='demo-label' style='color: #721c24; font-weight: 700;'>Death Date:</span> ",
+      "<span class='demo-value' style='color: #721c24; font-weight: 600;'>",
+      format(death_date, "%Y-%m-%d"), death_source, "</span>",
+      "</div>"
+    )
+  }
+
   paste0(
     "<div class='demographics-panel'>",
     "<div class='demo-row'>",
-    "<span class='demo-label'>PATID:</span> <span class='demo-value'>", 
+    "<span class='demo-label'>PATID:</span> <span class='demo-value'>",
     htmlEscape(as.character(d$PATID)), "</span>",
     "</div>",
     "<div class='demo-row'>",
-    "<span class='demo-label'>DOB:</span> <span class='demo-value'>", 
+    "<span class='demo-label'>DOB:</span> <span class='demo-value'>",
     as.character(d$BIRTH_DATE), age_str, "</span>",
     "<span class='demo-label'>Sex:</span> <span class='demo-value'>", sex, "</span>",
     "<span class='demo-label'>Race:</span> <span class='demo-value'>", race, "</span>",
     "</div>",
+    death_row,
     "<div class='demo-row'>",
-    "<span class='demo-label'>Ethnicity:</span> <span class='demo-value'>", 
+    "<span class='demo-label'>Ethnicity:</span> <span class='demo-value'>",
     ethnicity, "</span>",
     "</div>",
     sources_html,
     "<div class='demo-row'>",
-    "<span class='demo-label'>Total Events:</span> <span class='demo-value'>", 
+    "<span class='demo-label'>Total Events:</span> <span class='demo-value'>",
     format(total_events, big.mark = ","), "</span>",
     "</div>",
     "</div>"

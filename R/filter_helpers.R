@@ -25,9 +25,9 @@ filter_by_event_type <- function(events, selected_types) {
     "conditions" = "condition"
   )
   
-  # Always include death marker if present
-  active_types <- c(type_mapping[selected_types], "death")
-  
+  # Always include death and birth markers if present
+  active_types <- c(type_mapping[selected_types], "death", "birth")
+
   events %>%
     filter(event_type %in% active_types)
 }
@@ -76,17 +76,18 @@ filter_by_encounter_type <- function(events, patient_data, enc_types) {
     patient_data$vitals$ENCOUNTERID
   )
   
-  # Keep events that are either encounters matching type, 
+  # Keep events that are either encounters matching type,
 
   # or events linked to those encounters,
   # or events that don't have encounter linkage (prescribing, dispensing, conditions)
+  # Always keep birth and death markers
   events %>%
     filter(
       (event_type == "encounter" & source_key %in% valid_enc_ids) |
-      (event_type %in% c("diagnosis", "procedure", "lab", "vital") & 
+      (event_type %in% c("diagnosis", "procedure", "lab", "vital") &
          # This requires looking up the encounter ID - simplified version
          TRUE) |
-      (event_type %in% c("prescribing", "dispensing", "condition", "death"))
+      (event_type %in% c("prescribing", "dispensing", "condition", "death", "birth"))
     )
 }
 
@@ -367,8 +368,9 @@ get_date_range <- function(patient_data) {
     vals[!is.na(vals)]
   }
   
-  # Collect all dates
+  # Collect all dates (including birth and death dates for full patient lifespan)
   all_dates <- c(
+    extract_dates(patient_data$demographic, "BIRTH_DATE"),
     extract_dates(patient_data$encounters, "ADMIT_DATE"),
     extract_dates(patient_data$diagnoses, "DX_DATE"),
     extract_dates(patient_data$diagnoses, "ADMIT_DATE"),

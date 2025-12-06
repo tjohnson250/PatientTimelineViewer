@@ -35,6 +35,7 @@ ui <- fluidPage(
   tags$head(
     tags$link(rel = "stylesheet", type = "text/css", href = "custom.css"),
     tags$script(src = "cluster-colors.js"),
+    tags$script(src = "timeline-markers.js"),
     tags$style(HTML("
       .shiny-notification {
         position: fixed;
@@ -505,13 +506,13 @@ server <- function(input, output, session) {
       
       # Clear selected event
       rv$selected_event <- NULL
-      
+
       removeNotification("loading")
       showNotification(
         paste("Loaded", get_total_event_count(rv$patient_data), "events"),
         type = "message"
       )
-      
+
     }, error = function(e) {
       removeNotification("loading")
       showNotification(
@@ -609,11 +610,38 @@ server <- function(input, output, session) {
       return(timevis(data.frame(), groups = get_timeline_groups()))
     }
 
+    # Calculate the actual date range from the events
+    event_dates <- as.Date(events$start)
+
+    # Also include birth and death dates if available
+    all_dates <- event_dates
+    if (!is.null(rv$patient_data$demographic) &&
+        nrow(rv$patient_data$demographic) > 0 &&
+        !is.na(rv$patient_data$demographic$BIRTH_DATE[1])) {
+      all_dates <- c(all_dates, as.Date(rv$patient_data$demographic$BIRTH_DATE[1]))
+    }
+    if (!is.null(rv$patient_data$death) &&
+        nrow(rv$patient_data$death) > 0 &&
+        !is.na(rv$patient_data$death$DEATH_DATE[1])) {
+      all_dates <- c(all_dates, as.Date(rv$patient_data$death$DEATH_DATE[1]))
+    }
+
+    min_date <- min(all_dates, na.rm = TRUE)
+    max_date <- max(all_dates, na.rm = TRUE)
+
+    # Add some padding (5% on each side)
+    date_range <- as.numeric(max_date - min_date)
+    padding <- max(1, date_range * 0.05)  # At least 1 day padding
+    window_start <- min_date - padding
+    window_end <- max_date + padding
+
     # Configure timeline options
     config <- list(
       stack = TRUE,
       stackSubgroups = TRUE,
       showCurrentTime = FALSE,
+      start = window_start,
+      end = window_end,
       zoomMin = 86400000,  # 1 day in milliseconds
       zoomMax = 3153600000000,  # 100 years in milliseconds
       tooltip = list(
@@ -646,6 +674,34 @@ server <- function(input, output, session) {
     )
   })
 
+  # Add birth and death markers after timeline renders
+  observe({
+    req(rv$patient_data)
+    req(filtered_events())
+
+    # Get birth date
+    birth_date <- NULL
+    if (!is.null(rv$patient_data$demographic) &&
+        nrow(rv$patient_data$demographic) > 0 &&
+        !is.na(rv$patient_data$demographic$BIRTH_DATE[1])) {
+      birth_date <- as.character(rv$patient_data$demographic$BIRTH_DATE[1])
+    }
+
+    # Get death date
+    death_date <- NULL
+    if (!is.null(rv$patient_data$death) &&
+        nrow(rv$patient_data$death) > 0 &&
+        !is.na(rv$patient_data$death$DEATH_DATE[1])) {
+      death_date <- as.character(rv$patient_data$death$DEATH_DATE[1])
+    }
+
+    # Send to JavaScript
+    session$sendCustomMessage('addTimelineMarkers', list(
+      birthDate = birth_date,
+      deathDate = death_date
+    ))
+  })
+
   # Handle timeline event selection
   observeEvent(input$timeline_selected, {
     selected_id <- input$timeline_selected
@@ -670,14 +726,15 @@ server <- function(input, output, session) {
   # Render demographics panel
   output$demographics_panel <- renderUI({
     req(rv$patient_data)
-    
+
     total_events <- get_total_event_count(rv$patient_data)
     html <- format_demographic_html(
       rv$patient_data$demographic,
       rv$patient_data$source_systems,
-      total_events
+      total_events,
+      rv$patient_data$death
     )
-    
+
     HTML(html)
   })
   
@@ -933,7 +990,33 @@ server <- function(input, output, session) {
 
   # Zoom controls
   observeEvent(input$zoom_fit, {
-    fit_timeline()
+    # Calculate window from actual filtered events
+    events <- filtered_events()
+    if (!is.null(events) && nrow(events) > 0) {
+      event_dates <- as.Date(events$start)
+
+      # Also include birth and death dates if available
+      all_dates <- event_dates
+      if (!is.null(rv$patient_data$demographic) &&
+          nrow(rv$patient_data$demographic) > 0 &&
+          !is.na(rv$patient_data$demographic$BIRTH_DATE[1])) {
+        all_dates <- c(all_dates, as.Date(rv$patient_data$demographic$BIRTH_DATE[1]))
+      }
+      if (!is.null(rv$patient_data$death) &&
+          nrow(rv$patient_data$death) > 0 &&
+          !is.na(rv$patient_data$death$DEATH_DATE[1])) {
+        all_dates <- c(all_dates, as.Date(rv$patient_data$death$DEATH_DATE[1]))
+      }
+
+      min_date <- min(all_dates, na.rm = TRUE)
+      max_date <- max(all_dates, na.rm = TRUE)
+
+      # Add padding (5% on each side)
+      date_range <- as.numeric(max_date - min_date)
+      padding <- max(1, date_range * 0.05)
+
+      set_timeline_window(min_date - padding, max_date + padding)
+    }
   })
 
   observeEvent(input$zoom_in, {

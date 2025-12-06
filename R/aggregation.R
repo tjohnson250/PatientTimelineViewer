@@ -24,12 +24,12 @@ aggregate_events <- function(events, level = "daily") {
       )
     )
   
-  # Separate events that should be aggregated (box events) from those that shouldn't (ranges/death)
+  # Separate events that should be aggregated (box events) from those that shouldn't (ranges/death/birth)
   point_events <- events %>%
-    filter(type == "box" & event_type != "death")
+    filter(type == "box" & !event_type %in% c("death", "birth"))
 
   other_events <- events %>%
-    filter(type != "box" | event_type == "death") %>%
+    filter(type != "box" | event_type %in% c("death", "birth")) %>%
     select(-any_of(c("period", "start_date")))
   
   if (nrow(point_events) == 0) {

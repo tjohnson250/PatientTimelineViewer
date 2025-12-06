@@ -60,6 +60,7 @@ CRITICAL REQUIREMENTS:
    - PRESCRIBING: ONLY search RAW_RX_MED_NAME (do NOT search RXNORM_CUI or NDC codes with drug names)
    - DISPENSING: ONLY search RAW_DISP_MED_NAME (do NOT search NDC or RAW_NDC with drug names)
    - Code fields contain numbers/codes, not medication names
+   - ALWAYS use LOWER() function for case-insensitive matching: LOWER(RAW_RX_MED_NAME) LIKE \'%drugname%\'
 10. For medication therapeutic class queries (like "pain relief"), translate to specific drug names:
    - "pain relief" or "pain" → search for aspirin, ibuprofen, acetaminophen, naproxen, etc.
    - "statins" → search for atorvastatin, simvastatin, rosuvastatin, pravastatin, lovastatin, etc.
@@ -96,21 +97,21 @@ SELECT PRESCRIBINGID as ID, PATID, RX_START_DATE as EVENT_DATE,
        RAW_RX_MED_NAME as MED_NAME, \'prescribing\' as SOURCE_TABLE
 FROM ', schema_prefix, 'PRESCRIBING
 WHERE PATID = \'', patid, '\'
-  AND (RAW_RX_MED_NAME LIKE \'%atorvastatin%\'
-       OR RAW_RX_MED_NAME LIKE \'%simvastatin%\'
-       OR RAW_RX_MED_NAME LIKE \'%rosuvastatin%\'
-       OR RAW_RX_MED_NAME LIKE \'%pravastatin%\'
-       OR RAW_RX_MED_NAME LIKE \'%lovastatin%\')
+  AND (LOWER(RAW_RX_MED_NAME) LIKE \'%atorvastatin%\'
+       OR LOWER(RAW_RX_MED_NAME) LIKE \'%simvastatin%\'
+       OR LOWER(RAW_RX_MED_NAME) LIKE \'%rosuvastatin%\'
+       OR LOWER(RAW_RX_MED_NAME) LIKE \'%pravastatin%\'
+       OR LOWER(RAW_RX_MED_NAME) LIKE \'%lovastatin%\')
 UNION ALL
 SELECT DISPENSINGID as ID, PATID, DISPENSE_DATE as EVENT_DATE,
        RAW_DISP_MED_NAME as MED_NAME, \'dispensing\' as SOURCE_TABLE
 FROM ', schema_prefix, 'DISPENSING
 WHERE PATID = \'', patid, '\'
-  AND (RAW_DISP_MED_NAME LIKE \'%atorvastatin%\'
-       OR RAW_DISP_MED_NAME LIKE \'%simvastatin%\'
-       OR RAW_DISP_MED_NAME LIKE \'%rosuvastatin%\'
-       OR RAW_DISP_MED_NAME LIKE \'%pravastatin%\'
-       OR RAW_DISP_MED_NAME LIKE \'%lovastatin%\')
+  AND (LOWER(RAW_DISP_MED_NAME) LIKE \'%atorvastatin%\'
+       OR LOWER(RAW_DISP_MED_NAME) LIKE \'%simvastatin%\'
+       OR LOWER(RAW_DISP_MED_NAME) LIKE \'%rosuvastatin%\'
+       OR LOWER(RAW_DISP_MED_NAME) LIKE \'%pravastatin%\'
+       OR LOWER(RAW_DISP_MED_NAME) LIKE \'%lovastatin%\')
 
 User: "Show medications for pain relief"
 Response:
@@ -118,33 +119,33 @@ SELECT PRESCRIBINGID as ID, PATID, RX_START_DATE as EVENT_DATE,
        RAW_RX_MED_NAME as MED_NAME, \'prescribing\' as SOURCE_TABLE
 FROM ', schema_prefix, 'PRESCRIBING
 WHERE PATID = \'', patid, '\'
-  AND (RAW_RX_MED_NAME LIKE \'%aspirin%\'
-       OR RAW_RX_MED_NAME LIKE \'%ibuprofen%\'
-       OR RAW_RX_MED_NAME LIKE \'%acetaminophen%\'
-       OR RAW_RX_MED_NAME LIKE \'%naproxen%\'
-       OR RAW_RX_MED_NAME LIKE \'%tylenol%\'
-       OR RAW_RX_MED_NAME LIKE \'%advil%\'
-       OR RAW_RX_MED_NAME LIKE \'%motrin%\'
-       OR RAW_RX_MED_NAME LIKE \'%aleve%\')
+  AND (LOWER(RAW_RX_MED_NAME) LIKE \'%aspirin%\'
+       OR LOWER(RAW_RX_MED_NAME) LIKE \'%ibuprofen%\'
+       OR LOWER(RAW_RX_MED_NAME) LIKE \'%acetaminophen%\'
+       OR LOWER(RAW_RX_MED_NAME) LIKE \'%naproxen%\'
+       OR LOWER(RAW_RX_MED_NAME) LIKE \'%tylenol%\'
+       OR LOWER(RAW_RX_MED_NAME) LIKE \'%advil%\'
+       OR LOWER(RAW_RX_MED_NAME) LIKE \'%motrin%\'
+       OR LOWER(RAW_RX_MED_NAME) LIKE \'%aleve%\')
 UNION ALL
 SELECT DISPENSINGID as ID, PATID, DISPENSE_DATE as EVENT_DATE,
        RAW_DISP_MED_NAME as MED_NAME, \'dispensing\' as SOURCE_TABLE
 FROM ', schema_prefix, 'DISPENSING
 WHERE PATID = \'', patid, '\'
-  AND (RAW_DISP_MED_NAME LIKE \'%aspirin%\'
-       OR RAW_DISP_MED_NAME LIKE \'%ibuprofen%\'
-       OR RAW_DISP_MED_NAME LIKE \'%acetaminophen%\'
-       OR RAW_DISP_MED_NAME LIKE \'%naproxen%\'
-       OR RAW_DISP_MED_NAME LIKE \'%tylenol%\'
-       OR RAW_DISP_MED_NAME LIKE \'%advil%\'
-       OR RAW_DISP_MED_NAME LIKE \'%motrin%\'
-       OR RAW_DISP_MED_NAME LIKE \'%aleve%\')
+  AND (LOWER(RAW_DISP_MED_NAME) LIKE \'%aspirin%\'
+       OR LOWER(RAW_DISP_MED_NAME) LIKE \'%ibuprofen%\'
+       OR LOWER(RAW_DISP_MED_NAME) LIKE \'%acetaminophen%\'
+       OR LOWER(RAW_DISP_MED_NAME) LIKE \'%naproxen%\'
+       OR LOWER(RAW_DISP_MED_NAME) LIKE \'%tylenol%\'
+       OR LOWER(RAW_DISP_MED_NAME) LIKE \'%advil%\'
+       OR LOWER(RAW_DISP_MED_NAME) LIKE \'%motrin%\'
+       OR LOWER(RAW_DISP_MED_NAME) LIKE \'%aleve%\')
 
 User: "Show prescriptions for metformin" (user specifically said "prescriptions")
 Response:
 SELECT * FROM ', schema_prefix, 'PRESCRIBING
 WHERE PATID = \'', patid, '\'
-  AND RAW_RX_MED_NAME LIKE \'%metformin%\'
+  AND LOWER(RAW_RX_MED_NAME) LIKE \'%metformin%\'
 
 Now generate the SQL for the user\'s query.')
 

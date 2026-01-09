@@ -57,7 +57,8 @@ class TimelineEventEntity: Entity, HasModel, HasCollision {
         if event.isRangeEvent {
             // Range events are shown as elongated capsules
             let duration = Float(event.durationDays ?? 1) * 0.01  // Scale factor
-            let mesh = MeshResource.generateCapsule(height: max(duration, 0.05), radius: 0.02)
+            let height = max(duration, 0.05 as Float)
+            let mesh = MeshResource.generateBox(size: SIMD3<Float>(0.04, height, 0.04), cornerRadius: 0.02)
             let material = TimelineColors.simpleMaterial(for: eventType)
             self.model = ModelComponent(mesh: mesh, materials: [material])
         } else {
@@ -138,7 +139,7 @@ class TimelineEventEntity: Entity, HasModel, HasCollision {
     private func updateAppearance() {
         guard let event = timelineEvent else { return }
 
-        var material: Material
+        var material: RealityKit.Material
 
         if isSelected {
             // Selected: brighter, glowing

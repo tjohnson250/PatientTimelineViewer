@@ -4,10 +4,10 @@ import RealityKit
 /// Patient Timeline 3D - A visionOS app for viewing patient medical history in immersive 3D space
 @main
 struct PatientTimeline3DApp: App {
-    @State private var immersionStyle: ImmersionStyle = .mixed
     @StateObject private var appModel = AppModel()
+    @State private var immersionStyle: ImmersionStyle = .mixed
 
-    var body: some Scene {
+    var body: some SwiftUI.Scene {
         // Main window with patient selection and controls
         WindowGroup {
             ContentView()

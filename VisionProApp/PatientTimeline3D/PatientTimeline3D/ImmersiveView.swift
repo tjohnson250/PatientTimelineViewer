@@ -98,9 +98,32 @@ struct ImmersiveView: View {
     @MainActor
     private func addEventEntities(to root: Entity, dateRange: ClosedRange<Date>) async {
         for event in appModel.filteredEvents {
-            let position = calculatePosition(for: event, in: dateRange)
-            let entity = TimelineEventEntity(event: event, position: position)
-            entity.position.y += appModel.timelineHeight
+            let entity: TimelineEventEntity
+
+            if event.isRangeEvent, let endDate = event.endDate {
+                // Range events get horizontal arcs
+                let startAngle = calculateAngle(for: event.startDate, in: dateRange)
+                let endAngle = calculateAngle(for: endDate, in: dateRange)
+
+                // Calculate radius and height based on event type
+                let typeOffset = Float(event.eventType.groupIndex) * 0.15
+                let radius = appModel.timelineRadius + typeOffset
+                let heightPerGroup: Float = 0.08
+                let height = Float(event.eventType.groupIndex) * heightPerGroup - 0.3 + appModel.timelineHeight
+
+                entity = TimelineEventEntity(
+                    event: event,
+                    startAngle: startAngle,
+                    endAngle: endAngle,
+                    radius: radius,
+                    height: height
+                )
+            } else {
+                // Point events get spheres
+                let position = calculatePosition(for: event, in: dateRange)
+                entity = TimelineEventEntity(event: event, position: position)
+                entity.position.y += appModel.timelineHeight
+            }
 
             eventEntities[event.id] = entity
             root.addChild(entity)
@@ -126,9 +149,31 @@ struct ImmersiveView: View {
 
         // Add entities for new events
         for event in appModel.filteredEvents where !existingEventIds.contains(event.id) {
-            let position = calculatePosition(for: event, in: dateRange)
-            let entity = TimelineEventEntity(event: event, position: position)
-            entity.position.y += appModel.timelineHeight
+            let entity: TimelineEventEntity
+
+            if event.isRangeEvent, let endDate = event.endDate {
+                // Range events get horizontal arcs
+                let startAngle = calculateAngle(for: event.startDate, in: dateRange)
+                let endAngle = calculateAngle(for: endDate, in: dateRange)
+
+                let typeOffset = Float(event.eventType.groupIndex) * 0.15
+                let radius = appModel.timelineRadius + typeOffset
+                let heightPerGroup: Float = 0.08
+                let height = Float(event.eventType.groupIndex) * heightPerGroup - 0.3 + appModel.timelineHeight
+
+                entity = TimelineEventEntity(
+                    event: event,
+                    startAngle: startAngle,
+                    endAngle: endAngle,
+                    radius: radius,
+                    height: height
+                )
+            } else {
+                // Point events get spheres
+                let position = calculatePosition(for: event, in: dateRange)
+                entity = TimelineEventEntity(event: event, position: position)
+                entity.position.y += appModel.timelineHeight
+            }
 
             eventEntities[event.id] = entity
             root.addChild(entity)

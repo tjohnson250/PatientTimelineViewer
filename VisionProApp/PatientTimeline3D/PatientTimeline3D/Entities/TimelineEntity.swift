@@ -7,6 +7,15 @@ class TimelineEventEntity: Entity, HasModel, HasCollision {
     /// The timeline event this entity represents
     var timelineEvent: TimelineEvent?
 
+    /// Start angle for range events (stored for arc rendering)
+    var startAngle: Float = 0
+
+    /// End angle for range events (stored for arc rendering)
+    var endAngle: Float = 0
+
+    /// Radius from center (stored for arc rendering)
+    var arcRadius: Float = 2.0
+
     /// Whether this entity is currently selected
     var isSelected: Bool = false {
         didSet {
@@ -27,18 +36,20 @@ class TimelineEventEntity: Entity, HasModel, HasCollision {
         super.init()
     }
 
-    /// Create a timeline event entity
+    /// Create a timeline event entity for point events
     @MainActor
     convenience init(event: TimelineEvent, position: TimelinePosition) {
         self.init()
         self.timelineEvent = event
         self.name = event.id
+        self.startAngle = position.angle
+        self.arcRadius = sqrt(position.x * position.x + position.z * position.z)
 
-        // Set position
+        // Set position at center for point events
         self.position = SIMD3<Float>(position.x, position.y, position.z)
 
         // Create the visual representation
-        setupVisuals(for: event)
+        setupPointVisuals(for: event)
 
         // Add collision for interaction
         setupCollision(for: event)
@@ -47,33 +58,122 @@ class TimelineEventEntity: Entity, HasModel, HasCollision {
         self.look(at: .zero, from: self.position, relativeTo: nil)
     }
 
+    /// Create a timeline event entity for range events (horizontal arc)
+    @MainActor
+    convenience init(event: TimelineEvent, startAngle: Float, endAngle: Float, radius: Float, height: Float) {
+        self.init()
+        self.timelineEvent = event
+        self.name = event.id
+        self.startAngle = startAngle
+        self.endAngle = endAngle
+        self.arcRadius = radius
+
+        // Position at the arc's midpoint
+        let midAngle = (startAngle + endAngle) / 2
+        let midX = radius * cos(midAngle)
+        let midZ = radius * sin(midAngle)
+        self.position = SIMD3<Float>(midX, height, midZ)
+
+        // Create the arc visual representation
+        setupArcVisuals(for: event, startAngle: startAngle, endAngle: endAngle, radius: radius)
+
+        // Add collision for interaction
+        setupArcCollision(for: event, startAngle: startAngle, endAngle: endAngle, radius: radius)
+    }
+
     // MARK: - Visual Setup
 
     @MainActor
-    private func setupVisuals(for event: TimelineEvent) {
+    private func setupPointVisuals(for event: TimelineEvent) {
         let eventType = event.eventType
 
-        // Determine shape based on event type
-        if event.isRangeEvent {
-            // Range events are shown as elongated capsules
-            let duration = Float(event.durationDays ?? 1) * 0.01  // Scale factor
-            let height = max(duration, 0.05 as Float)
-            let mesh = MeshResource.generateBox(size: SIMD3<Float>(0.04, height, 0.04), cornerRadius: 0.02)
-            let material = TimelineColors.simpleMaterial(for: eventType)
-            self.model = ModelComponent(mesh: mesh, materials: [material])
-        } else {
-            // Point events are spheres
-            let radius: Float = event.isAbnormal ? 0.025 : 0.02
-            let mesh = MeshResource.generateSphere(radius: radius)
-            let material = TimelineColors.simpleMaterial(for: eventType)
-            self.model = ModelComponent(mesh: mesh, materials: [material])
-        }
+        // Point events are spheres
+        let radius: Float = event.isAbnormal ? 0.025 : 0.02
+        let mesh = MeshResource.generateSphere(radius: radius)
+        let material = TimelineColors.simpleMaterial(for: eventType)
+        self.model = ModelComponent(mesh: mesh, materials: [material])
 
         // Add text label
         addLabel(for: event)
 
-        // Add icon
+        // Add abnormal indicator if needed
         addIcon(for: event)
+    }
+
+    @MainActor
+    private func setupArcVisuals(for event: TimelineEvent, startAngle: Float, endAngle: Float, radius: Float) {
+        let eventType = event.eventType
+        let material = TimelineColors.simpleMaterial(for: eventType)
+
+        // Calculate arc length to determine number of segments
+        var angleDiff = endAngle - startAngle
+        if angleDiff < 0 {
+            angleDiff += 2 * .pi  // Handle wrap-around
+        }
+
+        // Use more segments for longer arcs (minimum 3, roughly 1 per 5 degrees)
+        let segmentCount = max(3, Int(angleDiff / (5 * .pi / 180)))
+        let angleStep = angleDiff / Float(segmentCount)
+
+        // Create arc segments as small cylinders connecting points
+        for i in 0..<segmentCount {
+            let angle1 = startAngle + Float(i) * angleStep
+            let angle2 = startAngle + Float(i + 1) * angleStep
+
+            // Calculate positions relative to entity center
+            let midAngle = (startAngle + endAngle) / 2
+            let centerX = radius * cos(midAngle)
+            let centerZ = radius * sin(midAngle)
+
+            let x1 = radius * cos(angle1) - centerX
+            let z1 = radius * sin(angle1) - centerZ
+            let x2 = radius * cos(angle2) - centerX
+            let z2 = radius * sin(angle2) - centerZ
+
+            // Create a small cylinder segment
+            let segmentLength = sqrt(pow(x2 - x1, 2) + pow(z2 - z1, 2))
+            let segmentMesh = MeshResource.generateBox(
+                size: SIMD3<Float>(0.015, 0.015, segmentLength),
+                cornerRadius: 0.005
+            )
+
+            let segmentEntity = Entity()
+            segmentEntity.components.set(ModelComponent(mesh: segmentMesh, materials: [material]))
+
+            // Position at midpoint of segment
+            let midX = (x1 + x2) / 2
+            let midZ = (z1 + z2) / 2
+            segmentEntity.position = SIMD3<Float>(midX, 0, midZ)
+
+            // Rotate to align with arc direction
+            let segmentAngle = atan2(z2 - z1, x2 - x1)
+            segmentEntity.orientation = simd_quatf(angle: segmentAngle, axis: SIMD3<Float>(0, 1, 0))
+
+            self.addChild(segmentEntity)
+        }
+
+        // Add spheres at start and end points for clean caps
+        let capRadius: Float = 0.012
+        let capMesh = MeshResource.generateSphere(radius: capRadius)
+
+        // Start cap
+        let startCap = Entity()
+        startCap.components.set(ModelComponent(mesh: capMesh, materials: [material]))
+        let startX = radius * cos(startAngle) - radius * cos((startAngle + endAngle) / 2)
+        let startZ = radius * sin(startAngle) - radius * sin((startAngle + endAngle) / 2)
+        startCap.position = SIMD3<Float>(startX, 0, startZ)
+        self.addChild(startCap)
+
+        // End cap
+        let endCap = Entity()
+        endCap.components.set(ModelComponent(mesh: capMesh, materials: [material]))
+        let endX = radius * cos(endAngle) - radius * cos((startAngle + endAngle) / 2)
+        let endZ = radius * sin(endAngle) - radius * sin((startAngle + endAngle) / 2)
+        endCap.position = SIMD3<Float>(endX, 0, endZ)
+        self.addChild(endCap)
+
+        // Add label at the midpoint
+        addLabel(for: event)
     }
 
     @MainActor
@@ -120,14 +220,23 @@ class TimelineEventEntity: Entity, HasModel, HasCollision {
 
     @MainActor
     private func setupCollision(for event: TimelineEvent) {
-        // Add collision shape for interaction
-        let shape: ShapeResource
-        if event.isRangeEvent {
-            let duration = Float(event.durationDays ?? 1) * 0.01
-            shape = ShapeResource.generateCapsule(height: max(duration, 0.05), radius: 0.025)
-        } else {
-            shape = ShapeResource.generateSphere(radius: 0.03)
+        // Add collision shape for point events
+        let shape = ShapeResource.generateSphere(radius: 0.03)
+        self.components.set(CollisionComponent(shapes: [shape]))
+        self.components.set(InputTargetComponent())
+    }
+
+    @MainActor
+    private func setupArcCollision(for event: TimelineEvent, startAngle: Float, endAngle: Float, radius: Float) {
+        // Create a bounding box collision for the arc
+        var angleDiff = endAngle - startAngle
+        if angleDiff < 0 {
+            angleDiff += 2 * .pi
         }
+
+        // Approximate arc with a box at its midpoint
+        let arcLength = radius * angleDiff
+        let shape = ShapeResource.generateBox(size: SIMD3<Float>(arcLength * 0.5, 0.05, 0.05))
 
         self.components.set(CollisionComponent(shapes: [shape]))
         self.components.set(InputTargetComponent())

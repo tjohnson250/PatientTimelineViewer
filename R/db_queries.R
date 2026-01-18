@@ -213,8 +213,8 @@ query_source_systems <- function(mpi_conn, patid) {
     FROM dbo.Mpi m
     LEFT JOIN dbo.MPI_Src s ON m.Src = s.SRC
     WHERE m.Uid = (
-      SELECT DISTINCT UID 
-      FROM dbo.SourceRecords_Ext 
+      SELECT DISTINCT Uid
+      FROM dbo.EnterpriseRecords_Ext
       WHERE CDM_PATID = ?
     )
   "

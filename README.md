@@ -1,9 +1,3 @@
----
-editor_options: 
-  markdown: 
-    wrap: 72
----
-
 # Patient Timeline Viewer
 
 A Shiny application for viewing a comprehensive temporal overview of a

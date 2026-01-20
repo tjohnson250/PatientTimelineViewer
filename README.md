@@ -140,7 +140,7 @@ Sys.setenv(R_CONFIG_ACTIVE = "production")
 shiny::runApp()
 ```
 
-## AI-Powered Semantic Filtering (Optional Feature) {#ai-powered-semantic-filtering-optional-feature}
+## AI-Powered Semantic Filtering (Optional Feature)
 
 The application includes an optional AI-powered semantic filtering feature that lets you query patient data using natural language instead of manual filters.
 

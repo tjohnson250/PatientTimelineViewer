@@ -1,33 +1,23 @@
 # Patient Timeline Viewer
 
-A Shiny application for viewing a comprehensive temporal overview of a
-single patient's data from a PCORnet CDM data warehouse. Supports both
-MS SQL Server and DuckDB backends.
+A Shiny application for viewing a comprehensive temporal overview of a single patient's data from a PCORnet CDM data warehouse. Supports both MS SQL Server and DuckDB backends.
+
+*Screenshot shows synthetic sample data included with the project.*
 
 ![Patient Timeline Viewer Screenshot](images/timeline_screenshot.png)
 
 ## Features
 
--   **Demographics Display**: Shows patient information including PATID,
-    DOB, age, sex, race, ethnicity, and source systems
--   **Interactive Timeline**: Visual timeline of all clinical events
-    using the timevis library
--   **Multiple Event Types**: Encounters, Diagnoses, Procedures, Labs,
-    Prescriptions, Dispensing, Vitals, Conditions, and Death
--   **AI-Powered Semantic Filtering** (Optional): Use natural language
-    queries like "Show statins" or "Show encounters with A1c \> 9 to
-    filter patient data
--   **Aggregation Options**: View events individually, aggregated by
-    day, or by week
--   **Automatic Clustering:** Automatically cluster events as you zoom
-    in and out of the timeline
--   **Filtering**: Filter by event type, date range, diagnosis codes,
-    procedure codes, lab names, and medication names
+-   **Demographics Display**: Shows patient information including PATID, DOB, age, sex, race, ethnicity, and source systems
+-   **Interactive Timeline**: Visual timeline of all clinical events using the timevis library
+-   **Multiple Event Types**: Encounters, Diagnoses, Procedures, Labs, Prescriptions, Dispensing, Vitals, Conditions, and Death
+-   **AI-Powered Semantic Filtering** (Optional): Use natural language queries like "Show statins" or "Show encounters with A1c \> 9 to filter patient data
+-   **Aggregation Options**: View events individually, aggregated by day, or by week
+-   **Automatic Clustering:** Automatically cluster events as you zoom in and out of the timeline
+-   **Filtering**: Filter by event type, date range, diagnosis codes, procedure codes, lab names, and medication names
 -   **Event Details**: Click any event to view complete record details
--   **Related Events**: For encounters, quickly zoom to see all events
-    during that visit
--   **Dual Database Support**: Works with MS SQL Server (production) or
-    DuckDB (development/testing)
+-   **Related Events**: For encounters, quickly zoom to see all events during that visit
+-   **Dual Database Support**: Works with MS SQL Server (production) or DuckDB (development/testing)
 
 ## Event Type Color Scheme
 
@@ -79,8 +69,7 @@ install.packages("httr2")
 -   Pre-configured ODBC Data Source Name (DSN)
 -   Access to:
     -   CDW database with PCORnet CDM tables
-    -   MasterPatientIndex database (optional, for source system
-        mapping)
+    -   MasterPatientIndex database (optional, for source system mapping)
 
 #### Option 2: DuckDB (Development/Testing)
 
@@ -144,8 +133,7 @@ production:
       database: "MasterPatientIndex"
 ```
 
-To use a specific profile, set the `R_CONFIG_ACTIVE` environment
-variable:
+To use a specific profile, set the `R_CONFIG_ACTIVE` environment variable:
 
 ``` r
 Sys.setenv(R_CONFIG_ACTIVE = "production")
@@ -154,9 +142,7 @@ shiny::runApp()
 
 ## AI-Powered Semantic Filtering (Optional Feature) {#ai-powered-semantic-filtering-optional-feature}
 
-The application includes an optional AI-powered semantic filtering
-feature that lets you query patient data using natural language instead
-of manual filters.
+The application includes an optional AI-powered semantic filtering feature that lets you query patient data using natural language instead of manual filters.
 
 ### Setup
 
@@ -203,8 +189,7 @@ On Windows, set via System Properties → Environment Variables.
 
 #### 4. Configure Model (Optional)
 
-By default, the semantic filter uses `claude-sonnet-4-20250514`. To use
-a different model, edit `R/semantic_filter.R` line 99:
+By default, the semantic filter uses `claude-sonnet-4-20250514`. To use a different model, edit `R/semantic_filter.R` line 99:
 
 ``` r
 # Available models:
@@ -225,8 +210,7 @@ model = "claude-sonnet-4-20250514",  # Change this line
 
 ### Usage
 
-Once configured, you'll see an "AI-Powered Filter" panel at the top of
-the application. Enter natural language queries like:
+Once configured, you'll see an "AI-Powered Filter" panel at the top of the application. Enter natural language queries like:
 
 -   "Show statins"
 -   "Show encounters with A1c \> 9"
@@ -235,26 +219,19 @@ the application. Enter natural language queries like:
 -   "Show prescriptions for metformin"
 -   "Show labs where result was abnormal"
 
-Click "Apply" to execute the query. The generated SQL will be shown in a
-collapsible panel for transparency.
+Click "Apply" to execute the query. The generated SQL will be shown in a collapsible panel for transparency.
 
 ### Cost Considerations
 
-Each semantic query makes one API call to Anthropic: - **Typical cost**:
-\$0.003-\$0.01 USD per query.
+Each semantic query makes one API call to Anthropic: - **Typical cost**: \$0.003-\$0.01 USD per query.
 
-**Model pricing**: Check current rates at
-<https://www.anthropic.com/pricing>
+**Model pricing**: Check current rates at <https://www.anthropic.com/pricing>
 
-For budget control, consider: - Using Haiku model for routine queries -
-Monitoring API usage in your Anthropic console - Setting up usage alerts
+For budget control, consider: - Using Haiku model for routine queries - Monitoring API usage in your Anthropic console - Setting up usage alerts
 
 ### Disabling Semantic Filtering
 
-The feature is optional. If `ANTHROPIC_API_KEY` is not set, the
-application will show a warning at startup but will continue to work
-normally with all other features available. The AI-Powered Filter panel
-will still appear but will show an error if used without the API key.
+The feature is optional. If `ANTHROPIC_API_KEY` is not set, the application will show a warning at startup but will continue to work normally with all other features available. The AI-Powered Filter panel will still appear but will show an error if used without the API key.
 
 ## Project Structure
 
@@ -345,32 +322,25 @@ dbDisconnect(con)
 -   **Scroll**: Zoom in/out on timeline
 -   **Drag**: Pan left/right on timeline
 -   **Fit Button**: Zoom to show all events
--   **Show Related Events**: (For encounters) Zoom to encounter date
-    range
+-   **Show Related Events**: (For encounters) Zoom to encounter date range
 
 ## Aggregation Modes
 
 -   **Individual**: Every event shown as its own marker
--   **Daily**: Events of same type on same day collapse into one marker
-    with count
+-   **Daily**: Events of same type on same day collapse into one marker with count
 -   **Weekly**: Events grouped by ISO week
 
 ## Automatic Clustering
 
--   After aggregation, clustering automatically combines and separates
-    similar events based on the zoom level of timeline
+-   After aggregation, clustering automatically combines and separates similar events based on the zoom level of timeline
 
 ## Filtering Options
 
 ### AI-Powered Semantic Filter (Optional)
 
-If configured with an Anthropic API key, use natural language queries: -
-"Show statins" - "Show encounters with A1c \> 9" - "Show only inpatient
-encounters" - "Show diagnoses containing diabetes"
+If configured with an Anthropic API key, use natural language queries: - "Show statins" - "Show encounters with A1c \> 9" - "Show only inpatient encounters" - "Show diagnoses containing diabetes"
 
-See [AI-Powered Semantic
-Filtering](#ai-powered-semantic-filtering-optional-feature) section
-above for setup.
+See [AI-Powered Semantic Filtering](#ai-powered-semantic-filtering-optional-feature) section above for setup.
 
 ### Advanced Filters
 
@@ -387,17 +357,14 @@ Access via the expandable "Advanced Filters" section:
 -   Death events are displayed as a special marker spanning the timeline
 -   Events after death date remain visible for data quality review
 -   Abnormal lab results are highlighted with a warning indicator
--   Prescription end dates are calculated from days supply if not
-    explicitly provided
+-   Prescription end dates are calculated from days supply if not explicitly provided
 
 ## Troubleshooting
 
 ### MS SQL Server Connection Issues
 
--   Verify your ODBC DSN is configured: Check ODBC Data Source
-    Administrator
--   Test connection in R:
-    `DBI::dbConnect(odbc::odbc(), "SQLODBCD17CDM")`
+-   Verify your ODBC DSN is configured: Check ODBC Data Source Administrator
+-   Test connection in R: `DBI::dbConnect(odbc::odbc(), "SQLODBCD17CDM")`
 -   Verify you can access the database: `DBI::dbExecute(con, "USE CDW")`
 -   Check firewall rules for SQL Server port (default 1433)
 
@@ -405,8 +372,7 @@ Access via the expandable "Advanced Filters" section:
 
 -   Verify database file exists at the configured path
 -   Check file permissions (read access required)
--   Test connection:
-    `DBI::dbConnect(duckdb::duckdb(), "path/to/db.duckdb")`
+-   Test connection: `DBI::dbConnect(duckdb::duckdb(), "path/to/db.duckdb")`
 
 ### Missing Patient Data
 
@@ -431,18 +397,11 @@ install.packages("httr2")
 
 ### Semantic Filter Issues
 
-**"ANTHROPIC_API_KEY environment variable not set"** - Set the API key
-as described in the [AI-Powered Semantic
-Filtering](#ai-powered-semantic-filtering-optional-feature) section -
-Restart R/RStudio after setting it in `.Renviron`
+**"ANTHROPIC_API_KEY environment variable not set"** - Set the API key as described in the [AI-Powered Semantic Filtering](#ai-powered-semantic-filtering-optional-feature) section - Restart R/RStudio after setting it in `.Renviron`
 
-**"Claude API error: ..."** - Check your API key is valid - Verify
-internet connectivity - Check Anthropic API status at
-<https://status.anthropic.com>
+**"Claude API error: ..."** - Check your API key is valid - Verify internet connectivity - Check Anthropic API status at <https://status.anthropic.com>
 
-**Generated SQL returns no results** - View the generated SQL to
-understand what was queried - Try rephrasing your query more
-specifically - Use advanced filters as an alternative
+**Generated SQL returns no results** - View the generated SQL to understand what was queried - Try rephrasing your query more specifically - Use advanced filters as an alternative
 
 ## License
 

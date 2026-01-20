@@ -4,6 +4,8 @@ A Shiny application for viewing a comprehensive temporal overview of a
 single patient's data from a PCORnet CDM data warehouse. Supports both
 MS SQL Server and DuckDB backends.
 
+![Patient Timeline Viewer Screenshot](images/timeline_screenshot.png)
+
 ## Features
 
 -   **Demographics Display**: Shows patient information including PATID,

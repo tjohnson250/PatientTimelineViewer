@@ -2,15 +2,20 @@
 # SQL queries for retrieving patient data from PCORnet CDM tables
 # Supports both MS SQL Server and DuckDB backends
 
-library(DBI)
-library(config)
-library(dplyr)
+#' @importFrom DBI dbConnect dbDisconnect dbGetQuery dbExecute
+#' @importFrom config get
+#' @importFrom dplyr `%>%`
+NULL
 
 # Global variable to track database type
 .db_type <- NULL
 
 #' Get the current database type
+#'
+#' Returns the database type currently in use (mssql or duckdb).
+#'
 #' @return Character string: "mssql" or "duckdb"
+#' @keywords internal
 get_db_type <- function() {
   if (is.null(.db_type)) {
     cfg <- config::get()
@@ -20,7 +25,25 @@ get_db_type <- function() {
 }
 
 #' Establish database connections
-#' @return List with cdw and mpi connection objects
+#'
+#' Connect to the CDW and MPI databases based on configuration.
+#' Supports both MS SQL Server (via ODBC) and DuckDB backends.
+#'
+#' @return List with components:
+#'   \describe{
+#'     \item{cdw}{Connection to the CDW (PCORnet CDM) database}
+#'     \item{mpi}{Connection to the MPI (Master Patient Index) database}
+#'     \item{db_type}{Character string indicating database type}
+#'   }
+#'
+#' @examples
+#' \dontrun{
+#' conns <- get_db_connections()
+#' data <- load_patient_data(conns, "PAT001")
+#' close_db_connections(conns)
+#' }
+#'
+#' @export
 get_db_connections <- function() {
   cfg <- config::get()
   db_type <- cfg$db_type %||% "mssql"
@@ -121,7 +144,21 @@ get_db_connections <- function() {
 }
 
 #' Close database connections
-#' @param conns List of connection objects
+#'
+#' Safely close CDW and MPI database connections.
+#'
+#' @param conns List of connection objects from \code{\link{get_db_connections}}
+#'
+#' @return NULL (invisible)
+#'
+#' @examples
+#' \dontrun{
+#' conns <- get_db_connections()
+#' # ... use connections ...
+#' close_db_connections(conns)
+#' }
+#'
+#' @export
 close_db_connections <- function(conns) {
   if (!is.null(conns$cdw)) {
     tryCatch(DBI::dbDisconnect(conns$cdw), error = function(e) NULL)
@@ -537,9 +574,39 @@ query_death_cause <- function(conn, patid) {
 }
 
 #' Load all patient data
-#' @param conns Database connections list
-#' @param patid Patient ID
-#' @return List of data frames for all clinical data
+#'
+#' Load all clinical data for a patient from the PCORnet CDM database.
+#' Returns data from DEMOGRAPHIC, ENCOUNTER, DIAGNOSIS, PROCEDURES,
+#' LAB_RESULT_CM, PRESCRIBING, DISPENSING, VITAL, CONDITION, DEATH,
+#' and DEATH_CAUSE tables.
+#'
+#' @param conns Database connections list from \code{\link{get_db_connections}}
+#' @param patid Patient ID (PATID from the CDM)
+#'
+#' @return Named list of data frames:
+#'   \describe{
+#'     \item{demographic}{Patient demographics}
+#'     \item{source_systems}{Source system mappings from MPI}
+#'     \item{encounters}{Encounter records}
+#'     \item{diagnoses}{Diagnosis records}
+#'     \item{procedures}{Procedure records}
+#'     \item{labs}{Lab result records}
+#'     \item{prescribing}{Prescribing records}
+#'     \item{dispensing}{Dispensing records}
+#'     \item{vitals}{Vital sign records}
+#'     \item{conditions}{Condition records}
+#'     \item{death}{Death record (if exists)}
+#'     \item{death_cause}{Death cause records (if exist)}
+#'   }
+#'
+#' @examples
+#' \dontrun{
+#' conns <- get_db_connections()
+#' data <- load_patient_data(conns, "PAT0000001")
+#' close_db_connections(conns)
+#' }
+#'
+#' @export
 load_patient_data <- function(conns, patid) {
   list(
     demographic = query_demographic(conns$cdw, patid),

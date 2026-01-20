@@ -1,0 +1,39 @@
+# Database configuration for Patient Timeline Viewer
+# Supports both MS SQL Server (mssql) and DuckDB (duckdb)
+
+default:
+  # Database type: "mssql" or "duckdb"
+  db_type: "duckdb"
+
+  # MS SQL Server configuration (used when db_type = "mssql")
+  mssql:
+    cdw:
+      dsn: "SQLODBCD17CDM"
+      database: "CDW"
+    mpi:
+      dsn: "SQLODBCD17CDM"
+      database: "MasterPatientIndex"
+
+  # DuckDB configuration (used when db_type = "duckdb")
+  duckdb:
+    # Path to DuckDB database file (use ":memory:" for in-memory)
+    cdw_path: "./data/pcornet_cdw.duckdb"
+    mpi_path: "./data/mpi.duckdb"
+
+# Example configuration for local DuckDB development
+local:
+  db_type: "duckdb"
+  duckdb:
+    cdw_path: "./data/cdw.duckdb"
+    mpi_path: "./data/mpi.duckdb"
+
+# Example configuration for MS SQL Server production
+production:
+  db_type: "mssql"
+  mssql:
+    cdw:
+      dsn: "SQLODBCD17CDM_PROD"
+      database: "CDW"
+    mpi:
+      dsn: "SQLODBCD17CDM_PROD"
+      database: "MasterPatientIndex"

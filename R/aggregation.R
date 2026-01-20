@@ -1,14 +1,35 @@
 # aggregation.R
 # Aggregation logic for timeline events (none/daily/weekly)
 
-library(dplyr)
-library(lubridate)
-library(htmltools)
+#' @importFrom dplyr `%>%` mutate filter select any_of case_when n group_by summarise arrange bind_rows
+#' @importFrom lubridate isoyear isoweek
+#' @importFrom htmltools htmlEscape
+NULL
 
 #' Aggregate events by a time period
-#' @param events Data frame of timeline events
-#' @param level Aggregation level: "individual", "daily", or "weekly"
-#' @return Data frame of aggregated events
+#'
+#' Combine multiple events of the same type into single markers based on
+#' time period (daily or weekly). Range events (encounters with discharge dates),
+#' death markers, and birth markers are never aggregated.
+#'
+#' @param events Data frame of timeline events from \code{\link{transform_all_to_timevis}}
+#' @param level Aggregation level:
+#'   \describe{
+#'     \item{"individual"}{No aggregation, every event shown separately}
+#'     \item{"daily"}{Events of same type on same day combined}
+#'     \item{"weekly"}{Events grouped by ISO week}
+#'   }
+#'
+#' @return Data frame of aggregated events in timevis format
+#'
+#' @examples
+#' \dontrun{
+#' events <- transform_all_to_timevis(data)
+#' daily <- aggregate_events(events, "daily")
+#' weekly <- aggregate_events(events, "weekly")
+#' }
+#'
+#' @export
 aggregate_events <- function(events, level = "daily") {
   if (nrow(events) == 0) return(events)
   if (level == "individual") return(events)
@@ -123,10 +144,10 @@ aggregate_events <- function(events, level = "daily") {
           items <- unlist(contents[i])
           # Limit to first 10 items
           if (length(items) > 10) {
-            item_list <- paste0("• ", items[1:10], collapse = "<br>")
+            item_list <- paste0("- ", items[1:10], collapse = "<br>")
             item_list <- paste0(item_list, "<br>... and ", length(items) - 10, " more")
           } else {
-            item_list <- paste0("• ", items, collapse = "<br>")
+            item_list <- paste0("- ", items, collapse = "<br>")
           }
           paste0(header, item_list)
         }

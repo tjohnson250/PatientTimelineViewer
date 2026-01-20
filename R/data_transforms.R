@@ -1,12 +1,28 @@
 # data_transforms.R
 # Convert query results to timevis format
 
-library(dplyr)
-library(lubridate)
-library(htmltools)
+#' @importFrom dplyr `%>%` mutate filter select bind_rows rowwise ungroup coalesce if_else
+#' @importFrom lubridate floor_date isoyear isoweek
+#' @importFrom htmltools htmlEscape
+NULL
 
 #' Define timeline groups
-#' @return Data frame with group definitions
+#'
+#' Returns the group definitions for the timeline visualization.
+#' Groups include: encounters, diagnoses, procedures, labs,
+#' prescribing, dispensing, vitals, and conditions.
+#'
+#' @return Data frame with columns:
+#'   \describe{
+#'     \item{id}{Group identifier}
+#'     \item{content}{Display name for the group}
+#'   }
+#'
+#' @examples
+#' groups <- get_timeline_groups()
+#' print(groups)
+#'
+#' @export
 get_timeline_groups <- function() {
   data.frame(
     id = c("encounters", "diagnoses", "procedures", "labs", 
@@ -807,8 +823,37 @@ transform_birth_date <- function(demographic) {
 }
 
 #' Transform all patient data to timevis format
-#' @param patient_data List of patient data frames
-#' @return Data frame with all events in timevis format
+#'
+#' Convert patient data from PCORnet CDM format to timevis timeline format.
+#' This is the main transformation function that processes all clinical data
+#' types and returns a unified timeline format.
+#'
+#' @param patient_data List of patient data frames from \code{\link{load_patient_data}}
+#'
+#' @return Data frame with columns compatible with timevis:
+#'   \describe{
+#'     \item{id}{Unique event identifier}
+#'     \item{content}{Display text for the event}
+#'     \item{start}{Start date (character, YYYY-MM-DD format)}
+#'     \item{end}{End date for range events (character, YYYY-MM-DD format)}
+#'     \item{group}{Timeline group (encounters, diagnoses, etc.)}
+#'     \item{type}{Event type (point or range)}
+#'     \item{className}{CSS class for styling}
+#'     \item{title}{HTML tooltip content}
+#'     \item{source_table}{Original PCORnet table name}
+#'     \item{source_key}{Original record key}
+#'     \item{event_type}{Event category}
+#'   }
+#'
+#' @examples
+#' \dontrun{
+#' conns <- get_db_connections()
+#' data <- load_patient_data(conns, "PAT0000001")
+#' events <- transform_all_to_timevis(data)
+#' close_db_connections(conns)
+#' }
+#'
+#' @export
 transform_all_to_timevis <- function(patient_data) {
   
   # Transform each type with error handling

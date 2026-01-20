@@ -1,0 +1,33 @@
+Package: PatientTimelineViewer
+Title: Interactive Patient Timeline Visualization for PCORnet CDM Data
+Version: 0.1.0
+Authors@R:
+    person("Todd", "Johnson", email = "todd.johnson@example.com", role = c("aut", "cre"))
+Description: A Shiny application for viewing a comprehensive temporal overview of
+    a single patient's data from a PCORnet CDM data warehouse. Supports both
+    MS SQL Server and DuckDB backends. Includes interactive timeline visualization,
+    event filtering, aggregation options, and optional AI-powered semantic filtering.
+License: MIT + file LICENSE
+URL: https://github.com/tjohnson250/PatientTimelineViewer
+BugReports: https://github.com/tjohnson250/PatientTimelineViewer/issues
+Depends:
+    R (>= 4.0.0)
+Imports:
+    shiny,
+    shinyjs,
+    timevis,
+    dplyr,
+    lubridate,
+    DBI,
+    config,
+    htmltools,
+    stringr
+Suggests:
+    odbc,
+    duckdb,
+    httr2,
+    testthat (>= 3.0.0)
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.3.3
+Roxygen: list(markdown = TRUE)

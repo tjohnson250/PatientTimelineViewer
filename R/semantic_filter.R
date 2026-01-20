@@ -1,12 +1,26 @@
 # semantic_filter.R
 # Functions for generating and validating SQL from natural language queries using Claude API
 
-library(httr2)
+# Note: httr2 is in Suggests, so we check availability at runtime
 
 #' Load PCORnet schema context from file
+#'
+#' Loads the PCORnet CDM schema documentation for use in generating
+#' semantic filter SQL queries.
+#'
 #' @return Character string with schema documentation
+#' @keywords internal
 load_schema_context <- function() {
-  schema_file <- "R/pcornet_schema.txt"
+  # Try package location first (when installed)
+  schema_file <- system.file("extdata", "pcornet_schema.txt",
+                             package = "PatientTimelineViewer")
+
+  # Fall back to development location
+
+  if (schema_file == "" || !file.exists(schema_file)) {
+    schema_file <- "R/pcornet_schema.txt"
+  }
+
   if (file.exists(schema_file)) {
     return(readLines(schema_file, warn = FALSE) |> paste(collapse = "\n"))
   } else {
@@ -62,9 +76,9 @@ CRITICAL REQUIREMENTS:
    - Code fields contain numbers/codes, not medication names
    - ALWAYS use LOWER() function for case-insensitive matching: LOWER(RAW_RX_MED_NAME) LIKE \'%drugname%\'
 10. For medication therapeutic class queries (like "pain relief"), translate to specific drug names:
-   - "pain relief" or "pain" → search for aspirin, ibuprofen, acetaminophen, naproxen, etc.
-   - "statins" → search for atorvastatin, simvastatin, rosuvastatin, pravastatin, lovastatin, etc.
-   - "beta blockers" → search for metoprolol, atenolol, carvedilol, propranolol, etc.
+   - "pain relief" or "pain" -> search for aspirin, ibuprofen, acetaminophen, naproxen, etc.
+   - "statins" -> search for atorvastatin, simvastatin, rosuvastatin, pravastatin, lovastatin, etc.
+   - "beta blockers" -> search for metoprolol, atenolol, carvedilol, propranolol, etc.
    - Use OR conditions to search for multiple drug names in the same query
 
 Available tables and columns:
@@ -245,11 +259,39 @@ validate_sql <- function(sql, patid, db_type = "mssql") {
 }
 
 #' Apply semantic filter to patient data
-#' @param natural_query User's natural language query
-#' @param patid Patient ID
-#' @param db_conn Database connection
-#' @param db_type Database type ("mssql" or "duckdb")
-#' @return List with filtered_data (data frame), sql (query used), and error (if any)
+#'
+#' Use natural language to filter patient data using AI-generated SQL.
+#' Requires the ANTHROPIC_API_KEY environment variable to be set.
+#'
+#' @param natural_query User's natural language query (e.g., "Show statins",
+#'   "Show encounters with A1c > 9")
+#' @param patid Patient ID to filter by
+#' @param db_conn Database connection from \code{\link{get_db_connections}}
+#' @param db_type Database type: "mssql" or "duckdb"
+#'
+#' @return List with components:
+#'   \describe{
+#'     \item{filtered_data}{Data frame with matching records (or NULL on error)}
+#'     \item{sql}{Generated SQL query}
+#'     \item{error}{Error message (or NULL on success)}
+#'     \item{message}{Success message with record count}
+#'   }
+#'
+#' @examples
+#' \dontrun{
+#' conns <- get_db_connections()
+#' result <- apply_semantic_filter(
+#'   "Show diagnoses containing diabetes",
+#'   "PAT0000001",
+#'   conns$cdw,
+#'   conns$db_type
+#' )
+#' if (is.null(result$error)) {
+#'   print(result$filtered_data)
+#' }
+#' }
+#'
+#' @export
 apply_semantic_filter <- function(natural_query, patid, db_conn, db_type = "mssql") {
   result <- list(
     filtered_data = NULL,

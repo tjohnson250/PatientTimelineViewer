@@ -1,8 +1,9 @@
 # filter_helpers.R
 # Filtering functions for timeline events
 
-library(dplyr)
-library(stringr)
+#' @importFrom dplyr `%>%` filter pull
+#' @importFrom stringr str_detect str_to_lower
+NULL
 
 #' Filter events by event type
 #' @param events Data frame of timeline events
@@ -195,8 +196,23 @@ filter_by_med_name <- function(events, patient_data, pattern) {
 }
 
 #' Get event type counts from raw data
-#' @param patient_data List of patient data frames
-#' @return Named list with counts
+#'
+#' Count the number of events of each type in the patient data.
+#'
+#' @param patient_data List of patient data frames from \code{\link{load_patient_data}}
+#'
+#' @return Named list with counts for each event type:
+#'   encounters, diagnoses, procedures, labs, prescribing,
+#'   dispensing, vitals, conditions
+#'
+#' @examples
+#' \dontrun{
+#' data <- load_patient_data(conns, "PAT0000001")
+#' counts <- get_event_type_counts(data)
+#' print(counts$diagnoses)
+#' }
+#'
+#' @export
 get_event_type_counts <- function(patient_data) {
   list(
     encounters = nrow(patient_data$encounters),
@@ -304,10 +320,39 @@ filter_by_semantic_results <- function(events, semantic_results, table_name) {
 }
 
 #' Apply all filters to events
-#' @param events Data frame of timeline events
-#' @param patient_data Full patient data list
-#' @param filters Named list of filter values
-#' @return Filtered data frame
+#'
+#' Apply multiple filter criteria to timeline events. Filters are applied
+#' in order: semantic filter, event type, date range, diagnosis pattern,
+#' procedure pattern, lab name, medication name, encounter type.
+#'
+#' @param events Data frame of timeline events from \code{\link{transform_all_to_timevis}}
+#' @param patient_data Full patient data list from \code{\link{load_patient_data}}
+#' @param filters Named list of filter values:
+#'   \describe{
+#'     \item{event_types}{Character vector of event types to include}
+#'     \item{start_date}{Start of date range (Date or character)}
+#'     \item{end_date}{End of date range (Date or character)}
+#'     \item{dx_pattern}{Diagnosis code pattern (SQL LIKE syntax)}
+#'     \item{px_pattern}{Procedure code pattern (SQL LIKE syntax)}
+#'     \item{lab_name}{Lab name text filter}
+#'     \item{med_name}{Medication name text filter}
+#'     \item{enc_types}{Encounter types to include}
+#'     \item{semantic_results}{Results from semantic filter (optional)}
+#'     \item{semantic_table}{Table for semantic filter (optional)}
+#'   }
+#'
+#' @return Filtered data frame of timeline events
+#'
+#' @examples
+#' \dontrun{
+#' events <- transform_all_to_timevis(data)
+#' filtered <- apply_all_filters(events, data, list(
+#'   event_types = c("encounters", "diagnoses"),
+#'   dx_pattern = "E11%"
+#' ))
+#' }
+#'
+#' @export
 apply_all_filters <- function(events, patient_data, filters) {
   result <- events
 
@@ -350,8 +395,26 @@ apply_all_filters <- function(events, patient_data, filters) {
 }
 
 #' Get date range from events
-#' @param patient_data List of patient data frames
-#' @return List with min and max dates
+#'
+#' Calculate the minimum and maximum dates across all patient data.
+#' Includes birth date, death date, and all event dates.
+#'
+#' @param patient_data List of patient data frames from \code{\link{load_patient_data}}
+#'
+#' @return List with components:
+#'   \describe{
+#'     \item{min}{Minimum date (Date object)}
+#'     \item{max}{Maximum date (Date object)}
+#'   }
+#'
+#' @examples
+#' \dontrun{
+#' data <- load_patient_data(conns, "PAT0000001")
+#' range <- get_date_range(data)
+#' print(paste("Data spans", range$min, "to", range$max))
+#' }
+#'
+#' @export
 get_date_range <- function(patient_data) {
   # Helper to safely extract dates from a column
   extract_dates <- function(df, col) {

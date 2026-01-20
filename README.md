@@ -1,10 +1,28 @@
 # Patient Timeline Viewer
 
-A Shiny application for viewing a comprehensive temporal overview of a single patient's data from a PCORnet CDM data warehouse. Supports both MS SQL Server and DuckDB backends.
+An R package and Shiny application for viewing a comprehensive temporal overview of a single patient's data from a PCORnet CDM data warehouse. Supports both MS SQL Server and DuckDB backends.
 
-*Screenshot shows synthetic sample data included with the project.*
+*Screenshot shows synthetic sample data included with the package.*
 
 ![Patient Timeline Viewer Screenshot](images/timeline_screenshot.png)
+
+## Installation
+
+``` r
+# Install from GitHub
+remotes::install_github("tjohnson250/PatientTimelineViewer")
+```
+
+## Quick Start
+
+``` r
+library(PatientTimelineViewer)
+
+# Launch the interactive timeline viewer app
+runExample()
+```
+
+The package includes synthetic sample data, so you can explore the functionality immediately after installation.
 
 ## Features
 
@@ -35,29 +53,21 @@ A Shiny application for viewing a comprehensive temporal overview of a single pa
 
 ## Requirements
 
-### R Packages
+### For MS SQL Server connections
 
 ``` r
-# Core packages (always required)
-install.packages(c(
-  "shiny",
-  "shinyjs",
-  "timevis",
-  "dplyr",
-  "lubridate",
-  "DBI",
-  "config",
-  "htmltools",
-  "stringr"
-))
-
-# For MS SQL Server
 install.packages("odbc")
+```
 
-# For DuckDB
+### For DuckDB connections (included sample data)
+
+``` r
 install.packages("duckdb")
+```
 
-# For AI-Powered Semantic Filtering (optional)
+### For AI-Powered Semantic Filtering (optional)
+
+``` r
 install.packages("httr2")
 ```
 

@@ -1,0 +1,295 @@
+---
+title: "Getting Started with PatientTimelineViewer"
+author: "Todd Johnson"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Getting Started with PatientTimelineViewer}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r}
+#| include: false
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+## Overview
+
+PatientTimelineViewer is an R package for visualizing patient clinical data from a PCORnet Common Data Model (CDM) data warehouse. It provides an interactive timeline showing encounters, diagnoses, procedures, labs, medications, vitals, and conditions.
+
+## Installation
+
+Install the package from GitHub:
+
+```{r}
+# Install remotes if needed
+install.packages("remotes")
+
+# Install PatientTimelineViewer
+remotes::install_github("tjohnson250/PatientTimelineViewer")
+```
+
+### Database Driver Dependencies
+
+Depending on your database backend, install one of:
+
+```{r}
+# For DuckDB (development/testing, included sample data)
+install.packages("duckdb")
+
+# For MS SQL Server (production)
+install.packages("odbc")
+```
+
+### Optional: AI-Powered Filtering
+
+To enable natural language filtering with Claude AI:
+
+```{r}
+install.packages("httr2")
+```
+
+Then set your API key in `~/.Renviron`:
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
+```
+
+## Quick Start
+
+Launch the demo app with the included synthetic sample data:
+
+```{r}
+library(PatientTimelineViewer)
+runExample()
+```
+
+This opens the timeline viewer in your browser. Enter a patient ID (try `PAT0000001` or `PAT0000002` with the sample data) and click "Load Patient".
+
+## Configuration
+
+The package uses the `config` package for database configuration. Create a `config.yml` file in your working directory:
+
+### DuckDB Configuration
+
+```yaml
+default:
+  db_type: "duckdb"
+  duckdb:
+    cdw_path: "./data/my_cdw.duckdb"
+    mpi_path: "./data/my_mpi.duckdb"
+```
+
+### MS SQL Server Configuration
+
+```yaml
+default:
+  db_type: "mssql"
+  mssql:
+    cdw:
+      dsn: "MyODBCDataSource"
+      database: "CDW"
+    mpi:
+      dsn: "MyODBCDataSource"
+      database: "MasterPatientIndex"
+```
+
+### Multiple Profiles
+
+You can define multiple configuration profiles and switch between them:
+
+```yaml
+default:
+  db_type: "duckdb"
+  duckdb:
+    cdw_path: "./data/test.duckdb"
+    mpi_path: "./data/test_mpi.duckdb"
+
+production:
+  db_type: "mssql"
+  mssql:
+    cdw:
+      dsn: "PROD_DSN"
+      database: "CDW"
+    mpi:
+      dsn: "PROD_DSN"
+      database: "MasterPatientIndex"
+```
+
+To use a specific profile:
+
+```{r}
+Sys.setenv(R_CONFIG_ACTIVE = "production")
+runExample()
+```
+
+## Using Package Functions Directly
+
+Beyond the Shiny app, you can use the package functions in your own code:
+
+```{r}
+library(PatientTimelineViewer)
+
+# Connect to databases
+conns <- get_db_connections()
+
+# Load patient data
+patient_data <- load_patient_data(conns, "PAT0000001")
+
+# Check event counts
+counts <- get_event_type_counts(patient_data)
+print(counts)
+# $encounters: 15
+# $diagnoses: 44
+# $procedures: 18
+# ...
+
+# Transform to timeline format
+events <- transform_all_to_timevis(patient_data)
+
+# Apply filters
+filtered <- apply_all_filters(events, patient_data, list(
+  event_types = c("encounters", "diagnoses"),
+  dx_pattern = "E11%"  # Diabetes codes
+))
+
+# Aggregate by day
+daily_events <- aggregate_events(filtered, "daily")
+
+# Clean up
+close_db_connections(conns)
+```
+
+## Timeline Features
+
+### Event Types
+
+The timeline displays these PCORnet CDM event types:
+
+| Event Type | Color | Description |
+|------------|-------|-------------|
+| Encounters | Blue (#3498db) | Hospital visits, ED visits, outpatient |
+| Diagnoses | Coral (#e74c3c) | ICD-9/10 diagnosis codes |
+| Procedures | Purple (#9b59b6) | CPT, HCPCS, ICD procedure codes |
+| Labs | Green (#27ae60) | Lab results with values |
+| Prescriptions | Orange (#e67e22) | Prescribed medications |
+| Dispensing | Amber (#f39c12) | Dispensed medications |
+| Vitals | Teal (#1abc9c) | BP, height, weight, BMI |
+| Conditions | Pink (#e91e63) | Problem list conditions |
+| Death | Dark Gray (#2c3e50) | Death record marker |
+
+### Aggregation Options
+
+Control how events are grouped on the timeline:
+
+- **Individual**: Every event shown separately
+- **Daily**: Events of the same type on the same day are combined
+- **Weekly**: Events grouped by ISO week
+
+### Filtering Options
+
+#### Event Type Checkboxes
+
+Toggle visibility of each event type using the checkboxes.
+
+#### Date Range
+
+Filter events to a specific date range.
+
+#### Advanced Filters
+
+Expand "Advanced Filters" to access:
+
+- **Diagnosis Code**: SQL LIKE pattern (e.g., `E11%` for diabetes)
+- **Procedure Code**: SQL LIKE pattern (e.g., `99213%`)
+- **Lab Name**: Partial text match (e.g., `glucose`)
+- **Medication Name**: Partial text match (e.g., `metformin`)
+- **Encounter Type**: Filter by IP, ED, AV, etc.
+
+#### AI-Powered Semantic Filter
+
+If configured with an Anthropic API key, use natural language queries:
+
+- "Show statins"
+- "Show encounters with A1c > 9"
+- "Show only inpatient encounters"
+- "Show diagnoses containing diabetes"
+
+### Timeline Interactions
+
+- **Hover**: View tooltip with event details
+- **Click**: Select event to view full record in details panel
+- **Scroll**: Zoom in/out on timeline
+- **Drag**: Pan left/right on timeline
+- **Fit All**: Zoom to show all events
+- **Show Related Events**: For encounters, zoom to that visit's date range
+
+## Accessing Sample Data
+
+The package includes synthetic sample data for testing:
+
+```{r}
+# Get paths to bundled sample databases
+cdw_path <- get_sample_data_path("cdw")
+mpi_path <- get_sample_data_path("mpi")
+
+# Connect directly
+library(DBI)
+library(duckdb)
+con <- dbConnect(duckdb(), cdw_path, read_only = TRUE)
+
+# Query available patients
+patients <- dbGetQuery(con, "SELECT PATID, BIRTH_DATE, SEX FROM DEMOGRAPHIC")
+print(patients)
+
+dbDisconnect(con)
+```
+
+The sample data includes 10 synthetic patients with realistic clinical event patterns.
+
+## Troubleshooting
+
+### "Package not found" after installation
+
+Restart R/RStudio after installing the package.
+
+### DuckDB connection errors
+
+Ensure the database file exists and you have read permissions:
+
+```{r}
+file.exists(get_sample_data_path("cdw"))  # Should be TRUE
+```
+
+### MS SQL Server connection errors
+
+1. Verify your ODBC DSN is configured (check ODBC Data Source Administrator)
+2. Test the connection:
+
+```{r}
+library(DBI)
+library(odbc)
+con <- dbConnect(odbc(), "YourDSN")
+dbGetQuery(con, "SELECT 1")
+dbDisconnect(con)
+```
+
+### Semantic filter not working
+
+1. Check that `ANTHROPIC_API_KEY` is set:
+
+```{r}
+Sys.getenv("ANTHROPIC_API_KEY")  # Should not be empty
+```
+
+2. Restart R after setting it in `.Renviron`
+
+## Further Resources
+
+- [GitHub Repository](https://github.com/tjohnson250/PatientTimelineViewer)
+- [PCORnet CDM Documentation](https://pcornet.org/data-driven-common-model/)
+- [timevis Package](https://github.com/daattali/timevis) (underlying timeline widget)

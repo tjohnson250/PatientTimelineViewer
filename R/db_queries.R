@@ -647,6 +647,7 @@ load_patient_data <- function(conns, patid) {
 #' Get total event count across all tables
 #' @param patient_data List of patient data frames
 #' @return Integer count of total events
+#' @export
 get_total_event_count <- function(patient_data) {
   sum(
     nrow(patient_data$encounters),

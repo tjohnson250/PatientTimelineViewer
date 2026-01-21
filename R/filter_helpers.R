@@ -229,6 +229,7 @@ get_event_type_counts <- function(patient_data) {
 #' Get unique encounter types from data
 #' @param encounters Encounters data frame
 #' @return Character vector of unique encounter types
+#' @export
 get_encounter_types <- function(encounters) {
   if (nrow(encounters) == 0) return(character(0))
   

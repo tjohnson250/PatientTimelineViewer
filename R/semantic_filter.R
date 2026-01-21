@@ -41,6 +41,12 @@ load_schema_context <- function() {
 #' @param db_type Database type ("mssql" or "duckdb")
 #' @return Generated SQL query string
 generate_filter_sql <- function(natural_query, patid, schema_context = NULL, db_type = "mssql") {
+  # Check for httr2 package
+
+  if (!requireNamespace("httr2", quietly = TRUE)) {
+    stop("httr2 package required for semantic filtering. Install with: install.packages('httr2')")
+  }
+
   # Check for API key
   api_key <- Sys.getenv("ANTHROPIC_API_KEY")
   if (api_key == "") {
@@ -173,20 +179,20 @@ Now generate the SQL for the user\'s query.')
     # See https://docs.anthropic.com/en/docs/models-overview for latest models
     model_name <- "claude-sonnet-4-20250514"
 
-    response <- request("https://api.anthropic.com/v1/messages") |>
-      req_headers(
+    response <- httr2::request("https://api.anthropic.com/v1/messages") |>
+      httr2::req_headers(
         `x-api-key` = api_key,
         `anthropic-version` = "2023-06-01",
         `content-type` = "application/json"
       ) |>
-      req_body_json(list(
+      httr2::req_body_json(list(
         model = model_name,
         max_tokens = 1024,
         system = system_prompt,
         messages = list(list(role = "user", content = natural_query))
       )) |>
-      req_perform() |>
-      resp_body_json()
+      httr2::req_perform() |>
+      httr2::resp_body_json()
 
     # Extract SQL from response
     sql <- response$content[[1]]$text

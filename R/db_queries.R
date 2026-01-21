@@ -57,7 +57,7 @@ get_db_connections <- function() {
     }
     
     duckdb_cfg <- cfg$duckdb
-    
+
     # Resolve CDW path - handle relative paths from app directory
     cdw_path <- duckdb_cfg$cdw_path
     if (!file.exists(cdw_path)) {
@@ -67,14 +67,22 @@ get_db_connections <- function() {
       if (file.exists(alt_path)) {
         cdw_path <- alt_path
       } else {
-        stop(paste0(
-          "DuckDB CDW database file not found.\n",
-          "  Configured path: ", duckdb_cfg$cdw_path, "\n",
-          "  Working directory: ", app_dir, "\n",
-          "  Checked: ", cdw_path, "\n",
-          "  Also checked: ", alt_path, "\n",
-          "Please verify the path in config.yml or use an absolute path."
-        ))
+        # Try bundled sample data as fallback
+        sample_path <- system.file("extdata", "pcornet_cdw.duckdb",
+                                   package = "PatientTimelineViewer")
+        if (sample_path != "" && file.exists(sample_path)) {
+          cdw_path <- sample_path
+          message("Using bundled sample CDW data")
+        } else {
+          stop(paste0(
+            "DuckDB CDW database file not found.\n",
+            "  Configured path: ", duckdb_cfg$cdw_path, "\n",
+            "  Working directory: ", app_dir, "\n",
+            "  Checked: ", cdw_path, "\n",
+            "  Also checked: ", alt_path, "\n",
+            "Please verify the path in config.yml or use an absolute path."
+          ))
+        }
       }
     }
     
@@ -100,14 +108,22 @@ get_db_connections <- function() {
         if (file.exists(alt_path)) {
           mpi_path <- alt_path
         } else {
-          stop(paste0(
-            "DuckDB MPI database file not found.\n",
-            "  Configured path: ", duckdb_cfg$mpi_path, "\n",
-            "  Working directory: ", app_dir, "\n",
-            "  Checked: ", mpi_path, "\n",
-            "  Also checked: ", alt_path, "\n",
-            "Please verify the path in config.yml or use an absolute path."
-          ))
+          # Try bundled sample data as fallback
+          sample_path <- system.file("extdata", "mpi.duckdb",
+                                     package = "PatientTimelineViewer")
+          if (sample_path != "" && file.exists(sample_path)) {
+            mpi_path <- sample_path
+            message("Using bundled sample MPI data")
+          } else {
+            stop(paste0(
+              "DuckDB MPI database file not found.\n",
+              "  Configured path: ", duckdb_cfg$mpi_path, "\n",
+              "  Working directory: ", app_dir, "\n",
+              "  Checked: ", mpi_path, "\n",
+              "  Also checked: ", alt_path, "\n",
+              "Please verify the path in config.yml or use an absolute path."
+            ))
+          }
         }
       }
       

@@ -415,4 +415,4 @@ install.packages("httr2")
 
 ## License
 
-Internal use only. Developed for clinical data warehouse visualization.
+MIT License. See [LICENSE](LICENSE) for details.

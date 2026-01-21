@@ -7,8 +7,9 @@
 #' @importFrom dplyr `%>%`
 NULL
 
-# Global variable to track database type
-.db_type <- NULL
+# Environment for mutable package state (avoids locked binding issues)
+.pkg_state <- new.env(parent = emptyenv())
+.pkg_state$db_type <- NULL
 
 #' Get the current database type
 #'
@@ -17,11 +18,11 @@ NULL
 #' @return Character string: "mssql" or "duckdb"
 #' @keywords internal
 get_db_type <- function() {
-  if (is.null(.db_type)) {
+  if (is.null(.pkg_state$db_type)) {
     cfg <- config::get()
-    .db_type <<- cfg$db_type %||% "mssql"
+    .pkg_state$db_type <- cfg$db_type %||% "mssql"
   }
-  .db_type
+  .pkg_state$db_type
 }
 
 #' Establish database connections
@@ -47,7 +48,7 @@ get_db_type <- function() {
 get_db_connections <- function() {
   cfg <- config::get()
   db_type <- cfg$db_type %||% "mssql"
-  .db_type <<- db_type
+  .pkg_state$db_type <- db_type
   
   if (db_type == "duckdb") {
     # DuckDB connection

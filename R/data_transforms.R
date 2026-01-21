@@ -945,6 +945,7 @@ calculate_age <- function(birth_date, ref_date = Sys.Date()) {
 #' @param total_events Total event count
 #' @param death Data frame with death info (optional)
 #' @return HTML string for demographic display
+#' @export
 format_demographic_html <- function(demographic, source_systems, total_events, death = NULL) {
   if (is.null(demographic) || nrow(demographic) == 0) {
     return("<p>No demographic data available</p>")

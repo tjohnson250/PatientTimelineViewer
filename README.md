@@ -46,18 +46,25 @@ library(PatientTimelineViewer)
 library(DBI)
 library(odbc)
 
-# Create your database connections
+# Create your database connection
 cdw <- dbConnect(odbc(), "MY_CDW_DSN")
 DBI::dbExecute(cdw, "USE CDW")
 
-# Launch the viewer with your connections
-viewTimeline(cdw_conn = cdw, mpi_conn = cdw, db_type = "mssql")
+# Launch the viewer (MPI is optional)
+viewTimeline(cdw_conn = cdw, db_type = "mssql")
+
+# Or with a separate MPI connection for source system info
+mpi <- dbConnect(odbc(), "MY_MPI_DSN")
+DBI::dbExecute(mpi, "USE MasterPatientIndex")
+viewTimeline(cdw_conn = cdw, mpi_conn = mpi, db_type = "mssql")
 ```
 
 The `viewTimeline()` function accepts:
 - `cdw_conn`: DBI connection to the CDW (PCORnet CDM) database (required)
-- `mpi_conn`: DBI connection to the MPI database (optional, can be NULL or same as cdw_conn)
+- `mpi_conn`: DBI connection to the MPI (Master Patient Index) database (optional)
 - `db_type`: Either "mssql" or "duckdb"
+
+**About the MPI connection:** The MPI database contains source system mappings (tables: `Mpi`, `MPI_Src`, `EnterpriseRecords_Ext`) that show which source systems contributed data for a patient. If you don't have an MPI database or don't need this information, you can pass `NULL` for `mpi_conn` - the app will work normally but won't display source system information in the demographics panel.
 
 Note: Connections you pass to `viewTimeline()` are not closed when the app exits - you manage their lifecycle.
 

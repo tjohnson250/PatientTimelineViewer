@@ -18,11 +18,35 @@ remotes::install_github("tjohnson250/PatientTimelineViewer")
 ``` r
 library(PatientTimelineViewer)
 
-# Launch the interactive timeline viewer app
+# Launch the interactive timeline viewer app with sample data
 runExample()
 ```
 
 The package includes synthetic sample data, so you can explore the functionality immediately after installation.
+
+### Using Your Own Database Connections
+
+To launch the viewer with your own database connections (e.g., from a Quarto document):
+
+``` r
+library(PatientTimelineViewer)
+library(DBI)
+library(odbc)
+
+# Create your database connections
+cdw <- dbConnect(odbc(), "MY_CDW_DSN")
+DBI::dbExecute(cdw, "USE CDW")
+
+# Launch the viewer with your connections
+viewTimeline(cdw_conn = cdw, mpi_conn = cdw, db_type = "mssql")
+```
+
+The `viewTimeline()` function accepts:
+- `cdw_conn`: DBI connection to the CDW (PCORnet CDM) database (required)
+- `mpi_conn`: DBI connection to the MPI database (optional, can be NULL or same as cdw_conn)
+- `db_type`: Either "mssql" or "duckdb"
+
+Note: Connections you pass to `viewTimeline()` are not closed when the app exits - you manage their lifecycle.
 
 ## Features
 

@@ -24,9 +24,22 @@ runExample()
 
 The package includes synthetic sample data, so you can explore the functionality immediately after installation.
 
-### Using Your Own Database Connections
+## Database Connection Options
 
-To launch the viewer with your own database connections (e.g., from a Quarto document):
+There are four ways to connect the timeline viewer to a database:
+
+### Option 1: Sample Data (Default)
+
+The simplest approach - uses the bundled synthetic DuckDB sample data:
+
+``` r
+library(PatientTimelineViewer)
+runExample()
+```
+
+### Option 2: Pass Your Own Connections
+
+Best for Quarto documents or programmatic use where you already have database connections established:
 
 ``` r
 library(PatientTimelineViewer)
@@ -47,6 +60,35 @@ The `viewTimeline()` function accepts:
 - `db_type`: Either "mssql" or "duckdb"
 
 Note: Connections you pass to `viewTimeline()` are not closed when the app exits - you manage their lifecycle.
+
+### Option 3: Custom config.yml with R_CONFIG_FILE
+
+Point to your own configuration file before launching:
+
+``` r
+library(PatientTimelineViewer)
+
+# Point to your config file
+Sys.setenv(R_CONFIG_FILE = "/path/to/your/config.yml")
+
+# Launch the app
+runExample()
+```
+
+### Option 4: Clone and Run Directly
+
+Clone the repository and run the Shiny app directly, using the local `config.yml`:
+
+``` bash
+git clone https://github.com/tjohnson250/PatientTimelineViewer.git
+cd PatientTimelineViewer
+```
+
+Edit `config.yml` with your database settings, then:
+
+``` r
+shiny::runApp()
+```
 
 ## Features
 

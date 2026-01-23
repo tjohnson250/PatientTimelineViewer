@@ -430,8 +430,19 @@ server <- function(input, output, session) {
   })
   outputOptions(output, "show_related_button", suspendWhenHidden = FALSE)
   
+
   # Initialize database connections
+  # Check for pre-supplied connections from viewTimeline() first
   observe({
+    # Check if connections were passed via viewTimeline()
+    supplied_conns <- getShinyOption("ptv_connections")
+    if (!is.null(supplied_conns)) {
+      rv$db_connections <- supplied_conns
+      message("Using pre-supplied database connections")
+      return()
+    }
+
+    # Fall back to config-based connections
     tryCatch({
       rv$db_connections <- get_db_connections()
     }, error = function(e) {
@@ -442,10 +453,12 @@ server <- function(input, output, session) {
       )
     })
   })
-  
+
   # Clean up connections on session end
+  # Note: Don't close connections if they were supplied externally
   onSessionEnded(function() {
-    if (!is.null(isolate(rv$db_connections))) {
+    supplied_conns <- getShinyOption("ptv_connections")
+    if (is.null(supplied_conns) && !is.null(isolate(rv$db_connections))) {
       close_db_connections(isolate(rv$db_connections))
     }
   })

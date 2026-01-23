@@ -47,6 +47,8 @@ library(DBI)
 library(odbc)
 
 # Create two connections from the same DSN, each set to a different database
+# Replace "MY_DSN" with your ODBC Data Source Name
+# Replace "CDW" and "MasterPatientIndex" with your actual database names
 cdw <- dbConnect(odbc(), "MY_DSN")
 DBI::dbExecute(cdw, "USE CDW")
 

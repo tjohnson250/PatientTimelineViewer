@@ -46,17 +46,18 @@ library(PatientTimelineViewer)
 library(DBI)
 library(odbc)
 
-# Create your database connection
-cdw <- dbConnect(odbc(), "MY_CDW_DSN")
+# Create two connections from the same DSN, each set to a different database
+cdw <- dbConnect(odbc(), "MY_DSN")
 DBI::dbExecute(cdw, "USE CDW")
 
-# Launch the viewer (MPI is optional)
-viewTimeline(cdw_conn = cdw, db_type = "mssql")
-
-# Or with a separate MPI connection for source system info
-mpi <- dbConnect(odbc(), "MY_MPI_DSN")
+mpi <- dbConnect(odbc(), "MY_DSN")
 DBI::dbExecute(mpi, "USE MasterPatientIndex")
+
+# Launch the viewer with both connections
 viewTimeline(cdw_conn = cdw, mpi_conn = mpi, db_type = "mssql")
+
+# Or without MPI if you don't need source system info
+viewTimeline(cdw_conn = cdw, db_type = "mssql")
 ```
 
 The `viewTimeline()` function accepts:

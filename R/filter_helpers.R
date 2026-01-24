@@ -232,10 +232,133 @@ get_event_type_counts <- function(patient_data) {
 #' @export
 get_encounter_types <- function(encounters) {
   if (nrow(encounters) == 0) return(character(0))
-  
+
   enc_types <- unique(encounters$ENC_TYPE)
   enc_types <- enc_types[!is.na(enc_types)]
   sort(enc_types)
+}
+
+#' Get unique source systems from patient data
+#'
+#' Collects unique CDW_Source values from all clinical event tables
+#' and returns a summary with counts and descriptions.
+#'
+#' @param patient_data List of patient data frames from \code{\link{load_patient_data}}
+#'
+#' @return Data frame with columns:
+#'   \describe{
+#'     \item{source_code}{CDW_Source code}
+#'     \item{count}{Number of events from this source}
+#'     \item{source_description}{Human-readable description (if available)}
+#'     \item{display_label}{Formatted label for UI display}
+#'   }
+#'
+#' @examples
+#' \dontrun{
+#' data <- load_patient_data(conns, "PAT0000001")
+#' sources <- get_source_systems(data)
+#' print(sources)
+#' }
+#'
+#' @export
+get_source_systems <- function(patient_data) {
+  # Collect CDW_Source from all clinical event tables
+  all_sources <- c(
+    patient_data$encounters$CDW_Source,
+    patient_data$diagnoses$CDW_Source,
+    patient_data$procedures$CDW_Source,
+    patient_data$labs$CDW_Source,
+    patient_data$prescribing$CDW_Source,
+    patient_data$dispensing$CDW_Source,
+    patient_data$vitals$CDW_Source,
+    patient_data$conditions$CDW_Source
+  )
+
+  # Remove NAs and empty strings
+  all_sources <- all_sources[!is.na(all_sources) & all_sources != ""]
+
+  if (length(all_sources) == 0) {
+    return(data.frame(
+      source_code = character(),
+      count = integer(),
+      source_description = character(),
+      display_label = character(),
+      stringsAsFactors = FALSE
+    ))
+  }
+
+  # Count by source
+  source_counts <- table(all_sources)
+
+  result <- data.frame(
+    source_code = names(source_counts),
+    count = as.integer(source_counts),
+    stringsAsFactors = FALSE
+  )
+
+  # Add descriptions if available
+  if (!is.null(patient_data$source_descriptions) &&
+      nrow(patient_data$source_descriptions) > 0) {
+    result <- result %>%
+      dplyr::left_join(
+        patient_data$source_descriptions %>%
+          dplyr::select(SRC, SourceDescription),
+        by = c("source_code" = "SRC")
+      ) %>%
+      dplyr::rename(source_description = SourceDescription)
+  } else {
+    result$source_description <- NA_character_
+  }
+
+  # Create display label with both description and raw code
+  result <- result %>%
+    dplyr::mutate(
+      display_label = dplyr::if_else(
+        !is.na(source_description),
+        paste0(source_description, " (", source_code, ") - ", count, " events"),
+        paste0(source_code, " - ", count, " events")
+      )
+    ) %>%
+    dplyr::arrange(dplyr::desc(count))
+
+  result
+}
+
+#' Filter events by source system
+#'
+#' Filter timeline events to include only those from selected source systems.
+#' Birth and death markers are always kept regardless of filter.
+#'
+#' @param events Data frame of timeline events
+#' @param selected_sources Character vector of selected CDW_Source codes.
+#'   If NULL, empty, or contains "ALL", returns all events.
+#'
+#' @return Filtered data frame
+#'
+#' @examples
+#' \dontrun{
+#' events <- transform_all_to_timevis(data)
+#' filtered <- filter_by_source_system(events, c("EPIC", "CERNER"))
+#' }
+#'
+#' @export
+filter_by_source_system <- function(events, selected_sources) {
+  # If no filter or "ALL" selected, return all events
+
+if (is.null(selected_sources) || length(selected_sources) == 0 ||
+      "ALL" %in% selected_sources) {
+    return(events)
+  }
+
+  events %>%
+    dplyr::filter(
+      # Keep events matching selected sources
+      cdw_source %in% selected_sources |
+      # Always keep birth and death markers
+      event_type %in% c("death", "birth") |
+      # Keep events with no source (if any)
+      is.na(cdw_source)
+    )
 }
 
 #' Filter events by semantic filter results
@@ -390,6 +513,11 @@ apply_all_filters <- function(events, patient_data, filters) {
   # Medication name filter
   if (!is.null(filters$med_name) && filters$med_name != "") {
     result <- filter_by_med_name(result, patient_data, filters$med_name)
+  }
+
+  # Source system filter
+  if (!is.null(filters$source_systems)) {
+    result <- filter_by_source_system(result, filters$source_systems)
   }
 
   result

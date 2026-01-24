@@ -28,7 +28,9 @@
       try {
         var birthDateTime = new Date(birthDate);
         timeline.addCustomTime(birthDateTime, 'birth-marker');
-        timeline.setCustomTimeMarker('Birth', 'birth-marker', true);
+        // Format the date for display (YYYY-MM-DD)
+        var birthDateFormatted = birthDateTime.toISOString().split('T')[0];
+        timeline.setCustomTimeMarker('Birth: ' + birthDateFormatted, 'birth-marker', true);
         console.log('Added birth marker at:', birthDate);
       } catch(e) {
         console.error('Error adding birth marker:', e);
@@ -40,7 +42,9 @@
       try {
         var deathDateTime = new Date(deathDate);
         timeline.addCustomTime(deathDateTime, 'death-marker');
-        timeline.setCustomTimeMarker('Death', 'death-marker', true);
+        // Format the date for display (YYYY-MM-DD)
+        var deathDateFormatted = deathDateTime.toISOString().split('T')[0];
+        timeline.setCustomTimeMarker('Death: ' + deathDateFormatted, 'death-marker', true);
         console.log('Added death marker at:', deathDate);
       } catch(e) {
         console.error('Error adding death marker:', e);

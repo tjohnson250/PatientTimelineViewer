@@ -251,6 +251,25 @@ query_demographic <- function(conn, patid) {
   execute_query(conn, sql, params = list(patid))
 }
 
+#' Query all source system descriptions from MPI
+#'
+#' Retrieves the mapping of source system codes to their human-readable
+#' descriptions from the MPI_Src table. Used to display friendly names
+#' for CDW_Source values on clinical events.
+#'
+#' @param mpi_conn MPI database connection
+#' @return Data frame with SRC codes and their SourceDescription
+#' @export
+query_source_descriptions <- function(mpi_conn) {
+  sql <- "
+    SELECT
+      SRC,
+      Description as SourceDescription
+    FROM dbo.MPI_Src
+  "
+  execute_query(mpi_conn, sql)
+}
+
 #' Query source system mappings from MPI
 #' @param mpi_conn MPI database connection
 #' @param patid Patient ID (unified PATID)
@@ -630,6 +649,10 @@ load_patient_data <- function(conns, patid) {
     source_systems = tryCatch(
       query_source_systems(conns$mpi, patid),
       error = function(e) data.frame()
+    ),
+    source_descriptions = tryCatch(
+      query_source_descriptions(conns$mpi),
+      error = function(e) data.frame(SRC = character(), SourceDescription = character())
     ),
     encounters = query_encounters(conns$cdw, patid),
     diagnoses = query_diagnoses(conns$cdw, patid),

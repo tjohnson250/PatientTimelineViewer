@@ -103,6 +103,32 @@ aggregate_events <- function(events, level = "daily") {
       df$className[1]  # fallback to first className
     )
 
+    # Handle source system for aggregated events
+    unique_sources <- unique(df$cdw_source[!is.na(df$cdw_source) & df$cdw_source != ""])
+    has_multiple_sources <- length(unique_sources) > 1
+
+    # Determine aggregated source values
+    if (length(unique_sources) == 0) {
+      agg_cdw_source <- NA_character_
+      agg_source_description <- NA_character_
+      source_class_suffix <- ""
+    } else if (length(unique_sources) == 1) {
+      agg_cdw_source <- unique_sources[1]
+      # Get description from first matching row
+      desc_row <- df[!is.na(df$cdw_source) & df$cdw_source == unique_sources[1], ]
+      agg_source_description <- if (nrow(desc_row) > 0 && "source_description" %in% names(desc_row)) {
+        desc_row$source_description[1]
+      } else {
+        NA_character_
+      }
+      source_class_suffix <- paste0(" source-", gsub("[^A-Za-z0-9]", "", unique_sources[1]))
+    } else {
+      # Multiple sources - mark as mixed
+      agg_cdw_source <- NA_character_
+      agg_source_description <- NA_character_
+      source_class_suffix <- " source-mixed"
+    }
+
     data.frame(
       group = df$group[1],
       event_type = event_type,
@@ -114,7 +140,11 @@ aggregate_events <- function(events, level = "daily") {
       source_keys = I(list(df$source_key)),
       start = df$start[1],  # Take first start
       source_table = df$source_table[1],
-      className = base_class,
+      className = paste0(base_class, source_class_suffix),
+      cdw_source = agg_cdw_source,
+      source_description = agg_source_description,
+      multiple_sources = has_multiple_sources,
+      all_sources = I(list(unique_sources)),
       stringsAsFactors = FALSE
     )
   })
@@ -139,7 +169,7 @@ aggregate_events <- function(events, level = "daily") {
           titles[[i]][1]
         } else {
           # Build aggregated tooltip
-          header <- paste0("<b>", count[i], " ", tools::toTitleCase(gsub("_", " ", event_type[i])), 
+          header <- paste0("<b>", count[i], " ", tools::toTitleCase(gsub("_", " ", event_type[i])),
                           "s on ", start[i], "</b><br>")
           items <- unlist(contents[i])
           # Limit to first 10 items
@@ -149,7 +179,20 @@ aggregate_events <- function(events, level = "daily") {
           } else {
             item_list <- paste0("- ", items, collapse = "<br>")
           }
-          paste0(header, item_list)
+          # Add source system info for aggregated events
+          source_info <- ""
+          if (multiple_sources[i]) {
+            sources_list <- unlist(all_sources[i])
+            source_info <- paste0("<br><b>Sources:</b> ", paste(sources_list, collapse = ", "))
+          } else if (!is.na(cdw_source[i])) {
+            if (!is.na(source_description[i])) {
+              source_info <- paste0("<br><b>Source System:</b> ", source_description[i],
+                                   " (", cdw_source[i], ")")
+            } else {
+              source_info <- paste0("<br><b>Source System:</b> ", cdw_source[i])
+            }
+          }
+          paste0(header, item_list, source_info)
         }
       }),
       # Store original IDs for click handling
@@ -158,7 +201,8 @@ aggregate_events <- function(events, level = "daily") {
       is_aggregated = count > 1
     ) %>%
     select(id, content, start, end, group, type, className, title,
-           source_table, source_key, event_type, original_ids, is_aggregated)
+           source_table, source_key, event_type, original_ids, is_aggregated,
+           cdw_source, source_description)
   
   # Combine with non-aggregated events
   if (nrow(other_events) > 0) {

@@ -148,10 +148,11 @@ transform_encounters <- function(encounters) {
       end = character(), group = character(), type = character(),
       className = character(), title = character(), source_table = character(),
       source_key = character(), event_type = character(),
+      cdw_source = character(),
       stringsAsFactors = FALSE
     ))
   }
-  
+
   # Parse dates vectorized FIRST, before rowwise
   # Convert to character immediately to avoid rowwise coercion issues
   encounters <- encounters %>%
@@ -161,7 +162,7 @@ transform_encounters <- function(encounters) {
       start_char = if_else(is.na(parsed_start), NA_character_, format(parsed_start, "%Y-%m-%d")),
       end_char = if_else(is.na(parsed_end), NA_character_, format(parsed_end, "%Y-%m-%d"))
     )
-  
+
   # Now build the output with rowwise for tooltips only
   result <- encounters %>%
     rowwise() %>%
@@ -184,11 +185,12 @@ transform_encounters <- function(encounters) {
       ),
       source_table = "ENCOUNTER",
       source_key = as.character(ENCOUNTERID),
-      event_type = "encounter"
+      event_type = "encounter",
+      cdw_source = as.character(CDW_Source)
     ) %>%
     ungroup() %>%
     select(id, content, start, end, group, type, className, title,
-           source_table, source_key, event_type)
+           source_table, source_key, event_type, cdw_source)
 
   result
 }
@@ -197,16 +199,19 @@ transform_encounters <- function(encounters) {
 #' @param diagnoses Data frame from query_diagnoses
 #' @return Data frame in timevis format
 transform_diagnoses <- function(diagnoses) {
+  empty_df <- data.frame(
+    id = character(), content = character(), start = character(),
+    end = character(), group = character(), type = character(),
+    className = character(), title = character(), source_table = character(),
+    source_key = character(), event_type = character(),
+    cdw_source = character(),
+    stringsAsFactors = FALSE
+  )
+
   if (is.null(diagnoses) || nrow(diagnoses) == 0) {
-    return(data.frame(
-      id = character(), content = character(), start = character(),
-      end = character(), group = character(), type = character(),
-      className = character(), title = character(), source_table = character(),
-      source_key = character(), event_type = character(),
-      stringsAsFactors = FALSE
-    ))
+    return(empty_df)
   }
-  
+
   # Parse dates vectorized FIRST
   diagnoses <- diagnoses %>%
     mutate(
@@ -214,17 +219,11 @@ transform_diagnoses <- function(diagnoses) {
       start_char = if_else(is.na(parsed_date), NA_character_, format(parsed_date, "%Y-%m-%d"))
     ) %>%
     filter(!is.na(parsed_date))
-  
+
   if (nrow(diagnoses) == 0) {
-    return(data.frame(
-      id = character(), content = character(), start = character(),
-      end = character(), group = character(), type = character(),
-      className = character(), title = character(), source_table = character(),
-      source_key = character(), event_type = character(),
-      stringsAsFactors = FALSE
-    ))
+    return(empty_df)
   }
-  
+
   diagnoses %>%
     rowwise() %>%
     mutate(
@@ -257,27 +256,31 @@ transform_diagnoses <- function(diagnoses) {
       ),
       source_table = "DIAGNOSIS",
       source_key = as.character(DIAGNOSISID),
-      event_type = "diagnosis"
+      event_type = "diagnosis",
+      cdw_source = as.character(CDW_Source)
     ) %>%
     ungroup() %>%
     select(id, content, start, end, group, type, className, title,
-           source_table, source_key, event_type)
+           source_table, source_key, event_type, cdw_source)
 }
 
 #' Transform procedures to timevis format
 #' @param procedures Data frame from query_procedures
 #' @return Data frame in timevis format
 transform_procedures <- function(procedures) {
+  empty_df <- data.frame(
+    id = character(), content = character(), start = character(),
+    end = character(), group = character(), type = character(),
+    className = character(), title = character(), source_table = character(),
+    source_key = character(), event_type = character(),
+    cdw_source = character(),
+    stringsAsFactors = FALSE
+  )
+
   if (is.null(procedures) || nrow(procedures) == 0) {
-    return(data.frame(
-      id = character(), content = character(), start = character(),
-      end = character(), group = character(), type = character(),
-      className = character(), title = character(), source_table = character(),
-      source_key = character(), event_type = character(),
-      stringsAsFactors = FALSE
-    ))
+    return(empty_df)
   }
-  
+
   # Parse dates vectorized FIRST
   procedures <- procedures %>%
     mutate(
@@ -285,17 +288,11 @@ transform_procedures <- function(procedures) {
       start_char = if_else(is.na(parsed_date), NA_character_, format(parsed_date, "%Y-%m-%d"))
     ) %>%
     filter(!is.na(parsed_date))
-  
+
   if (nrow(procedures) == 0) {
-    return(data.frame(
-      id = character(), content = character(), start = character(),
-      end = character(), group = character(), type = character(),
-      className = character(), title = character(), source_table = character(),
-      source_key = character(), event_type = character(),
-      stringsAsFactors = FALSE
-    ))
+    return(empty_df)
   }
-  
+
   procedures %>%
     rowwise() %>%
     mutate(
@@ -321,11 +318,12 @@ transform_procedures <- function(procedures) {
       ),
       source_table = "PROCEDURES",
       source_key = as.character(PROCEDURESID),
-      event_type = "procedure"
+      event_type = "procedure",
+      cdw_source = as.character(CDW_Source)
     ) %>%
     ungroup() %>%
     select(id, content, start, end, group, type, className, title,
-           source_table, source_key, event_type)
+           source_table, source_key, event_type, cdw_source)
 }
 
 #' Format lab result with modifiers and abnormal flags
@@ -379,16 +377,19 @@ format_lab_result <- function(result_num, result_qual, result_modifier,
 #' @param labs Data frame from query_labs
 #' @return Data frame in timevis format
 transform_labs <- function(labs) {
+  empty_df <- data.frame(
+    id = character(), content = character(), start = character(),
+    end = character(), group = character(), type = character(),
+    className = character(), title = character(), source_table = character(),
+    source_key = character(), event_type = character(),
+    cdw_source = character(),
+    stringsAsFactors = FALSE
+  )
+
   if (is.null(labs) || nrow(labs) == 0) {
-    return(data.frame(
-      id = character(), content = character(), start = character(),
-      end = character(), group = character(), type = character(),
-      className = character(), title = character(), source_table = character(),
-      source_key = character(), event_type = character(),
-      stringsAsFactors = FALSE
-    ))
+    return(empty_df)
   }
-  
+
   # Parse dates vectorized FIRST
   labs <- labs %>%
     mutate(
@@ -396,17 +397,11 @@ transform_labs <- function(labs) {
       start_char = if_else(is.na(parsed_date), NA_character_, format(parsed_date, "%Y-%m-%d"))
     ) %>%
     filter(!is.na(parsed_date))
-  
+
   if (nrow(labs) == 0) {
-    return(data.frame(
-      id = character(), content = character(), start = character(),
-      end = character(), group = character(), type = character(),
-      className = character(), title = character(), source_table = character(),
-      source_key = character(), event_type = character(),
-      stringsAsFactors = FALSE
-    ))
+    return(empty_df)
   }
-  
+
   labs %>%
     rowwise() %>%
     mutate(
@@ -425,7 +420,7 @@ transform_labs <- function(labs) {
       end = NA_character_,
       group = "labs",
       type = "box",
-      className = ifelse(!is.na(ABN_IND) & ABN_IND != "NI", 
+      className = ifelse(!is.na(ABN_IND) & ABN_IND != "NI",
                          "event-lab event-lab-abnormal", "event-lab"),
       title = create_tooltip(
         "Lab Name" = RAW_LAB_NAME,
@@ -437,27 +432,31 @@ transform_labs <- function(labs) {
       ),
       source_table = "LAB_RESULT_CM",
       source_key = as.character(LAB_RESULT_CM_ID),
-      event_type = "lab"
+      event_type = "lab",
+      cdw_source = as.character(CDW_Source)
     ) %>%
     ungroup() %>%
     select(id, content, start, end, group, type, className, title,
-           source_table, source_key, event_type)
+           source_table, source_key, event_type, cdw_source)
 }
 
 #' Transform prescribing to timevis format
 #' @param prescribing Data frame from query_prescribing
 #' @return Data frame in timevis format
 transform_prescribing <- function(prescribing) {
+  empty_df <- data.frame(
+    id = character(), content = character(), start = character(),
+    end = character(), group = character(), type = character(),
+    className = character(), title = character(), source_table = character(),
+    source_key = character(), event_type = character(),
+    cdw_source = character(),
+    stringsAsFactors = FALSE
+  )
+
   if (is.null(prescribing) || nrow(prescribing) == 0) {
-    return(data.frame(
-      id = character(), content = character(), start = character(),
-      end = character(), group = character(), type = character(),
-      className = character(), title = character(), source_table = character(),
-      source_key = character(), event_type = character(),
-      stringsAsFactors = FALSE
-    ))
+    return(empty_df)
   }
-  
+
   # Parse dates vectorized FIRST
   prescribing <- prescribing %>%
     mutate(
@@ -474,23 +473,17 @@ transform_prescribing <- function(prescribing) {
       end_char = if_else(is.na(parsed_end), NA_character_, format(parsed_end, "%Y-%m-%d"))
     ) %>%
     filter(!is.na(parsed_start))
-  
+
   if (nrow(prescribing) == 0) {
-    return(data.frame(
-      id = character(), content = character(), start = character(),
-      end = character(), group = character(), type = character(),
-      className = character(), title = character(), source_table = character(),
-      source_key = character(), event_type = character(),
-      stringsAsFactors = FALSE
-    ))
+    return(empty_df)
   }
-  
+
   prescribing %>%
     rowwise() %>%
     mutate(
       med_display = safe_coalesce(
-        as.character(RAW_RX_MED_NAME), 
-        as.character(RXNORM_CUI), 
+        as.character(RAW_RX_MED_NAME),
+        as.character(RXNORM_CUI),
         "Rx"
       ),
       dose_display = if (!is.na(RX_DOSE_ORDERED)) {
@@ -518,27 +511,31 @@ transform_prescribing <- function(prescribing) {
       ),
       source_table = "PRESCRIBING",
       source_key = as.character(PRESCRIBINGID),
-      event_type = "prescribing"
+      event_type = "prescribing",
+      cdw_source = as.character(CDW_Source)
     ) %>%
     ungroup() %>%
     select(id, content, start, end, group, type, className, title,
-           source_table, source_key, event_type)
+           source_table, source_key, event_type, cdw_source)
 }
 
 #' Transform dispensing to timevis format
 #' @param dispensing Data frame from query_dispensing
 #' @return Data frame in timevis format
 transform_dispensing <- function(dispensing) {
+  empty_df <- data.frame(
+    id = character(), content = character(), start = character(),
+    end = character(), group = character(), type = character(),
+    className = character(), title = character(), source_table = character(),
+    source_key = character(), event_type = character(),
+    cdw_source = character(),
+    stringsAsFactors = FALSE
+  )
+
   if (is.null(dispensing) || nrow(dispensing) == 0) {
-    return(data.frame(
-      id = character(), content = character(), start = character(),
-      end = character(), group = character(), type = character(),
-      className = character(), title = character(), source_table = character(),
-      source_key = character(), event_type = character(),
-      stringsAsFactors = FALSE
-    ))
+    return(empty_df)
   }
-  
+
   # Parse dates vectorized FIRST
   dispensing <- dispensing %>%
     mutate(
@@ -546,17 +543,11 @@ transform_dispensing <- function(dispensing) {
       start_char = if_else(is.na(parsed_date), NA_character_, format(parsed_date, "%Y-%m-%d"))
     ) %>%
     filter(!is.na(parsed_date))
-  
+
   if (nrow(dispensing) == 0) {
-    return(data.frame(
-      id = character(), content = character(), start = character(),
-      end = character(), group = character(), type = character(),
-      className = character(), title = character(), source_table = character(),
-      source_key = character(), event_type = character(),
-      stringsAsFactors = FALSE
-    ))
+    return(empty_df)
   }
-  
+
   dispensing %>%
     rowwise() %>%
     mutate(
@@ -577,11 +568,12 @@ transform_dispensing <- function(dispensing) {
       ),
       source_table = "DISPENSING",
       source_key = as.character(DISPENSINGID),
-      event_type = "dispensing"
+      event_type = "dispensing",
+      cdw_source = as.character(CDW_Source)
     ) %>%
     ungroup() %>%
     select(id, content, start, end, group, type, className, title,
-           source_table, source_key, event_type)
+           source_table, source_key, event_type, cdw_source)
 }
 
 #' Format vital signs for display
@@ -615,16 +607,19 @@ format_vital_content <- function(systolic, diastolic, ht, wt, bmi) {
 #' @param vitals Data frame from query_vitals
 #' @return Data frame in timevis format
 transform_vitals <- function(vitals) {
+  empty_df <- data.frame(
+    id = character(), content = character(), start = character(),
+    end = character(), group = character(), type = character(),
+    className = character(), title = character(), source_table = character(),
+    source_key = character(), event_type = character(),
+    cdw_source = character(),
+    stringsAsFactors = FALSE
+  )
+
   if (is.null(vitals) || nrow(vitals) == 0) {
-    return(data.frame(
-      id = character(), content = character(), start = character(),
-      end = character(), group = character(), type = character(),
-      className = character(), title = character(), source_table = character(),
-      source_key = character(), event_type = character(),
-      stringsAsFactors = FALSE
-    ))
+    return(empty_df)
   }
-  
+
   # Parse dates vectorized FIRST
   vitals <- vitals %>%
     mutate(
@@ -632,17 +627,11 @@ transform_vitals <- function(vitals) {
       start_char = if_else(is.na(parsed_date), NA_character_, format(parsed_date, "%Y-%m-%d"))
     ) %>%
     filter(!is.na(parsed_date))
-  
+
   if (nrow(vitals) == 0) {
-    return(data.frame(
-      id = character(), content = character(), start = character(),
-      end = character(), group = character(), type = character(),
-      className = character(), title = character(), source_table = character(),
-      source_key = character(), event_type = character(),
-      stringsAsFactors = FALSE
-    ))
+    return(empty_df)
   }
-  
+
   vitals %>%
     rowwise() %>%
     mutate(
@@ -671,27 +660,31 @@ transform_vitals <- function(vitals) {
       ),
       source_table = "VITAL",
       source_key = as.character(VITALID),
-      event_type = "vital"
+      event_type = "vital",
+      cdw_source = as.character(CDW_Source)
     ) %>%
     ungroup() %>%
     select(id, content, start, end, group, type, className, title,
-           source_table, source_key, event_type)
+           source_table, source_key, event_type, cdw_source)
 }
 
 #' Transform conditions to timevis format
 #' @param conditions Data frame from query_conditions
 #' @return Data frame in timevis format
 transform_conditions <- function(conditions) {
+  empty_df <- data.frame(
+    id = character(), content = character(), start = character(),
+    end = character(), group = character(), type = character(),
+    className = character(), title = character(), source_table = character(),
+    source_key = character(), event_type = character(),
+    cdw_source = character(),
+    stringsAsFactors = FALSE
+  )
+
   if (is.null(conditions) || nrow(conditions) == 0) {
-    return(data.frame(
-      id = character(), content = character(), start = character(),
-      end = character(), group = character(), type = character(),
-      className = character(), title = character(), source_table = character(),
-      source_key = character(), event_type = character(),
-      stringsAsFactors = FALSE
-    ))
+    return(empty_df)
   }
-  
+
   # Parse dates vectorized FIRST
   conditions <- conditions %>%
     mutate(
@@ -699,17 +692,11 @@ transform_conditions <- function(conditions) {
       start_char = if_else(is.na(parsed_date), NA_character_, format(parsed_date, "%Y-%m-%d"))
     ) %>%
     filter(!is.na(parsed_date))
-  
+
   if (nrow(conditions) == 0) {
-    return(data.frame(
-      id = character(), content = character(), start = character(),
-      end = character(), group = character(), type = character(),
-      className = character(), title = character(), source_table = character(),
-      source_key = character(), event_type = character(),
-      stringsAsFactors = FALSE
-    ))
+    return(empty_df)
   }
-  
+
   conditions %>%
     rowwise() %>%
     mutate(
@@ -743,11 +730,12 @@ transform_conditions <- function(conditions) {
       ),
       source_table = "CONDITION",
       source_key = as.character(CONDITIONID),
-      event_type = "condition"
+      event_type = "condition",
+      cdw_source = as.character(CDW_Source)
     ) %>%
     ungroup() %>%
     select(id, content, start, end, group, type, className, title,
-           source_table, source_key, event_type)
+           source_table, source_key, event_type, cdw_source)
 }
 
 #' Create death marker for timeline
@@ -760,13 +748,14 @@ transform_death <- function(death) {
       end = character(), group = character(), type = character(),
       className = character(), title = character(), source_table = character(),
       source_key = character(), event_type = character(),
+      cdw_source = character(),
       stringsAsFactors = FALSE
     ))
   }
-  
+
   death_date <- safe_parse_date(death$DEATH_DATE[1])
   death_date_str <- format(death_date, "%Y-%m-%d")
-  
+
   data.frame(
     id = "DEATH_MARKER",
     content = paste("Death:", death_date_str),
@@ -783,6 +772,7 @@ transform_death <- function(death) {
     source_table = "DEATH",
     source_key = as.character(death$PATID[1]),
     event_type = "death",
+    cdw_source = NA_character_,
     stringsAsFactors = FALSE
   )
 }
@@ -797,6 +787,7 @@ transform_birth_date <- function(demographic) {
       end = character(), group = character(), type = character(),
       className = character(), title = character(), source_table = character(),
       source_key = character(), event_type = character(),
+      cdw_source = character(),
       stringsAsFactors = FALSE
     ))
   }
@@ -818,6 +809,7 @@ transform_birth_date <- function(demographic) {
     source_table = "DEMOGRAPHIC",
     source_key = as.character(demographic$PATID[1]),
     event_type = "birth",
+    cdw_source = NA_character_,
     stringsAsFactors = FALSE
   )
 }
@@ -855,14 +847,14 @@ transform_birth_date <- function(demographic) {
 #'
 #' @export
 transform_all_to_timevis <- function(patient_data) {
-  
+
   # Transform each type with error handling
   transform_safe <- function(transform_fn, data, name) {
     tryCatch({
       result <- transform_fn(data)
       # Debug: print date info
       if (nrow(result) > 0) {
-        message(paste(name, "- rows:", nrow(result), 
+        message(paste(name, "- rows:", nrow(result),
                       "- start class:", class(result$start)[1],
                       "- first start:", result$start[1]))
       }
@@ -874,11 +866,12 @@ transform_all_to_timevis <- function(patient_data) {
         end = character(), group = character(), type = character(),
         className = character(), title = character(), source_table = character(),
         source_key = character(), event_type = character(),
+        cdw_source = character(),
         stringsAsFactors = FALSE
       )
     })
   }
-  
+
   events <- bind_rows(
     transform_safe(transform_encounters, patient_data$encounters, "encounters"),
     transform_safe(transform_diagnoses, patient_data$diagnoses, "diagnoses"),
@@ -890,7 +883,46 @@ transform_all_to_timevis <- function(patient_data) {
     transform_safe(transform_conditions, patient_data$conditions, "conditions"),
     transform_safe(transform_death, patient_data$death, "death")
   )
-  
+
+  # Add source system descriptions via lookup
+  if (nrow(events) > 0 && !is.null(patient_data$source_descriptions) &&
+      nrow(patient_data$source_descriptions) > 0) {
+    events <- events %>%
+      dplyr::left_join(
+        patient_data$source_descriptions %>%
+          dplyr::select(SRC, SourceDescription),
+        by = c("cdw_source" = "SRC")
+      ) %>%
+      dplyr::rename(source_description = SourceDescription)
+  } else {
+    events$source_description <- NA_character_
+  }
+
+  # Add source info to tooltips and CSS classes
+  if (nrow(events) > 0) {
+    events <- events %>%
+      dplyr::mutate(
+        # Add source system to tooltip
+        title = dplyr::case_when(
+          !is.na(source_description) & !is.na(cdw_source) ~
+            paste0(title, "<br><b>Source System:</b> ",
+                   htmltools::htmlEscape(source_description),
+                   " (", htmltools::htmlEscape(cdw_source), ")"),
+          !is.na(cdw_source) ~
+            paste0(title, "<br><b>Source System:</b> ",
+                   htmltools::htmlEscape(cdw_source)),
+          TRUE ~ title
+        ),
+        # Add source-based CSS class for visual coding
+        className = dplyr::case_when(
+          !is.na(cdw_source) & cdw_source != "" ~
+            paste0(className, " source-",
+                   gsub("[^A-Za-z0-9]", "", cdw_source)),
+          TRUE ~ className
+        )
+      )
+  }
+
   # Ensure proper types - dates should already be character from transforms
   if (nrow(events) > 0) {
     # Force conversion: if start column contains pure numbers as strings, convert them

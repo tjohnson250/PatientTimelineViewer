@@ -673,3 +673,138 @@ body {
   color: #2e7d32;
   border: 1px solid #a5d6a7;
 }
+
+/* ============================================
+   Source System Visual Indicators
+   ============================================ */
+
+/* Source system color palette */
+:root {
+  --source-color-1: #FF6B35;  /* Orange */
+  --source-color-2: #2EC4B6;  /* Teal */
+  --source-color-3: #9B59B6;  /* Purple */
+  --source-color-4: #3498DB;  /* Blue */
+  --source-color-5: #E74C3C;  /* Red */
+  --source-color-6: #27AE60;  /* Green */
+  --source-color-7: #F39C12;  /* Amber */
+  --source-color-8: #1ABC9C;  /* Mint */
+  --source-color-mixed: #7F8C8D;  /* Gray for mixed sources */
+}
+
+/* Base style for all source-tagged items */
+.vis-item[class*="source-"] {
+  border-left-width: 4px !important;
+  border-left-style: solid !important;
+}
+
+/* Named source systems - common EMR systems */
+.vis-item.source-EPIC { border-left-color: var(--source-color-1) !important; }
+.vis-item.source-CERNER { border-left-color: var(--source-color-2) !important; }
+.vis-item.source-MEDITECH { border-left-color: var(--source-color-3) !important; }
+.vis-item.source-ALLSCRIPTS { border-left-color: var(--source-color-4) !important; }
+.vis-item.source-ATHENA { border-left-color: var(--source-color-5) !important; }
+.vis-item.source-NEXTGEN { border-left-color: var(--source-color-6) !important; }
+.vis-item.source-ECLINICALWORKS { border-left-color: var(--source-color-7) !important; }
+.vis-item.source-VERADIGM { border-left-color: var(--source-color-8) !important; }
+
+/* Generic numbered sources for fallback */
+.vis-item.source-1, .vis-item.source-SRC1 { border-left-color: var(--source-color-1) !important; }
+.vis-item.source-2, .vis-item.source-SRC2 { border-left-color: var(--source-color-2) !important; }
+.vis-item.source-3, .vis-item.source-SRC3 { border-left-color: var(--source-color-3) !important; }
+.vis-item.source-4, .vis-item.source-SRC4 { border-left-color: var(--source-color-4) !important; }
+.vis-item.source-5, .vis-item.source-SRC5 { border-left-color: var(--source-color-5) !important; }
+.vis-item.source-6, .vis-item.source-SRC6 { border-left-color: var(--source-color-6) !important; }
+.vis-item.source-7, .vis-item.source-SRC7 { border-left-color: var(--source-color-7) !important; }
+.vis-item.source-8, .vis-item.source-SRC8 { border-left-color: var(--source-color-8) !important; }
+
+/* Mixed sources in aggregated events */
+.vis-item.source-mixed {
+  border-left-width: 4px !important;
+  border-left-style: dashed !important;
+  border-left-color: var(--source-color-mixed) !important;
+}
+
+/* Source system filter section */
+.source-filter-section {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid var(--border-color);
+}
+
+.source-filter-section h5 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+/* Source system checkboxes */
+.source-system-checkbox {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 15px;
+  margin-bottom: 8px;
+}
+
+.source-system-checkbox .checkbox {
+  margin: 0;
+}
+
+.source-system-checkbox .form-group {
+  margin-bottom: 0;
+}
+
+/* Source system legend */
+.source-legend {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+.source-legend-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.source-legend-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.source-legend-item {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+}
+
+.source-legend-color {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+/* Event details panel - source system row */
+.detail-panel .source-system-row {
+  background-color: #f0f9ff;
+  border-left: 3px solid #3498db;
+  padding: 8px 12px;
+  margin: 8px -15px;
+  border-radius: 0;
+}
+
+.detail-panel .source-system-row .detail-key {
+  color: #2980b9;
+  font-weight: 600;
+}
+
+.detail-panel .source-system-row .detail-value {
+  color: #2c3e50;
+  font-weight: 500;
+}

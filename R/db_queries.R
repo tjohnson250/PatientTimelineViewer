@@ -224,30 +224,57 @@ execute_query <- function(conn, sql, params = list()) {
   DBI::dbGetQuery(conn, sql, params = params)
 }
 
+#' Build SELECT query with only existing columns
+#'
+#' Creates a SELECT statement using only columns that exist in the table.
+#' This handles schema differences between databases (e.g., sample DuckDB
+#' databases may have fewer columns than production MS SQL Server databases).
+#'
+#' @param conn Database connection
+#' @param table_name Table name (without schema prefix)
+#' @param required_cols Character vector of columns that must exist
+#' @param optional_cols Character vector of columns that may or may not exist
+#' @param where_clause WHERE clause (without "WHERE" keyword) or NULL
+#' @return SQL SELECT statement string
+build_dynamic_select <- function(conn, table_name, required_cols, optional_cols = NULL, where_clause = NULL) {
+  db_type <- get_db_type()
+  full_table <- if (db_type == "mssql") paste0("dbo.", table_name) else table_name
+
+  available_cols <- tryCatch(
+    DBI::dbListFields(conn, table_name),
+    error = function(e) NULL
+  )
+
+  if (!is.null(available_cols)) {
+    select_cols <- c(
+      required_cols,
+      intersect(optional_cols, available_cols)
+    )
+  } else {
+    select_cols <- c(required_cols, optional_cols)
+  }
+
+  sql <- paste0("SELECT ", paste(select_cols, collapse = ", "), " FROM ", full_table)
+  if (!is.null(where_clause)) {
+    sql <- paste0(sql, " WHERE ", where_clause)
+  }
+  sql
+}
+
 #' Query demographic data for a patient
 #' @param conn Database connection
 #' @param patid Patient ID
 #' @return Data frame with demographic information
 query_demographic <- function(conn, patid) {
-  sql <- "
-    SELECT 
-      PATID,
-      BIRTH_DATE,
-      BIRTH_TIME,
-      SEX,
-      RACE,
-      HISPANIC,
-      GENDER_IDENTITY,
-      SEXUAL_ORIENTATION,
-      PAT_PREF_LANGUAGE_SPOKEN,
-      RAW_SEX,
-      RAW_RACE,
-      RAW_HISPANIC,
-      UID,
-      CDW_Source
-    FROM dbo.DEMOGRAPHIC
-    WHERE PATID = ?
-  "
+  sql <- build_dynamic_select(
+    conn,
+    "DEMOGRAPHIC",
+    required_cols = c("PATID", "BIRTH_DATE", "SEX", "RACE", "HISPANIC"),
+    optional_cols = c("BIRTH_TIME", "GENDER_IDENTITY", "SEXUAL_ORIENTATION",
+                      "PAT_PREF_LANGUAGE_SPOKEN", "RAW_SEX", "RAW_RACE",
+                      "RAW_HISPANIC", "UID", "CDW_Source"),
+    where_clause = "PATID = ?"
+  )
   execute_query(conn, sql, params = list(patid))
 }
 
@@ -573,16 +600,13 @@ query_conditions <- function(conn, patid) {
 #' @param patid Patient ID
 #' @return Data frame with death information (if exists)
 query_death <- function(conn, patid) {
-  sql <- "
-    SELECT 
-      PATID,
-      DEATH_DATE,
-      DEATH_DATE_IMPUTE,
-      DEATH_SOURCE,
-      DEATH_MATCH_CONFIDENCE
-    FROM dbo.DEATH
-    WHERE PATID = ?
-  "
+  sql <- build_dynamic_select(
+    conn,
+    "DEATH",
+    required_cols = c("PATID", "DEATH_DATE"),
+    optional_cols = c("DEATH_DATE_IMPUTE", "DEATH_SOURCE", "DEATH_MATCH_CONFIDENCE"),
+    where_clause = "PATID = ?"
+  )
   execute_query(conn, sql, params = list(patid))
 }
 
@@ -591,17 +615,14 @@ query_death <- function(conn, patid) {
 #' @param patid Patient ID
 #' @return Data frame with death cause information (if exists)
 query_death_cause <- function(conn, patid) {
-  sql <- "
-    SELECT 
-      PATID,
-      DEATH_CAUSE,
-      DEATH_CAUSE_CODE,
-      DEATH_CAUSE_TYPE,
-      DEATH_CAUSE_SOURCE,
-      DEATH_CAUSE_CONFIDENCE
-    FROM dbo.DEATH_CAUSE
-    WHERE PATID = ?
-  "
+  sql <- build_dynamic_select(
+    conn,
+    "DEATH_CAUSE",
+    required_cols = c("PATID"),
+    optional_cols = c("DEATH_CAUSE", "DEATH_CAUSE_CODE", "DEATH_CAUSE_TYPE",
+                      "DEATH_CAUSE_SOURCE", "DEATH_CAUSE_CONFIDENCE"),
+    where_clause = "PATID = ?"
+  )
   execute_query(conn, sql, params = list(patid))
 }
 

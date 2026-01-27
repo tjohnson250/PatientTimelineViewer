@@ -1014,6 +1014,13 @@ format_demographic_html <- function(demographic, source_systems, total_events, d
   )
   
   # Race mapping (simplified)
+  # Check if RAW_RACE column exists before using it
+  raw_race_val <- if ("RAW_RACE" %in% names(d) && !is.na(d$RAW_RACE)) {
+    as.character(d$RAW_RACE)
+  } else {
+    as.character(d$RACE)
+  }
+
   race <- case_when(
     is.na(d$RACE) ~ "Unknown",
     d$RACE == "01" ~ "American Indian or Alaska Native",
@@ -1026,7 +1033,7 @@ format_demographic_html <- function(demographic, source_systems, total_events, d
     d$RACE == "NI" ~ "No Information",
     d$RACE == "UN" ~ "Unknown",
     d$RACE == "OT" ~ "Other",
-    TRUE ~ if (!is.na(d$RAW_RACE)) as.character(d$RAW_RACE) else as.character(d$RACE)
+    TRUE ~ raw_race_val
   )
   
   # Ethnicity

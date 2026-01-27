@@ -81,12 +81,15 @@ get_sample_data_path <- function(file = c("cdw", "mpi")) {
 #'   database. Optional - can be NULL if MPI data is not available, or the
 #'   same as cdw_conn if MPI tables are in the same database.
 #' @param db_type The database type, either "mssql" or "duckdb". This affects
-#'   query parameter syntax and schema qualification.
-#' @param background Logical. If TRUE (the default), runs the app in a
+#'   query parameter syntax and schema qualification. Note: DuckDB connections
+#'   always run in blocking mode (background = FALSE) due to DuckDB's file
+#'   locking constraints.
+#' @param background Logical. If TRUE (the default for MSSQL), runs the app in a
 #'   background R process, allowing you to continue working in your R session.
 #'   The app URL will be printed and opened in your browser. Use
 #'   \code{\link{stopViewer}} to stop the background app. If FALSE, runs in
-#'   the current session (blocking).
+#'   the current session (blocking). Note: This parameter is ignored for DuckDB
+#'   connections, which always run in blocking mode.
 #' @param port The TCP port for the Shiny app. Default is 3838. Only used when
 #'   background = TRUE.
 #' @param launch.browser Logical. Should the app be opened in a browser?
@@ -115,12 +118,14 @@ get_sample_data_path <- function(file = c("cdw", "mpi")) {
 #' # Example 2: Blocking mode (traditional Shiny behavior)
 #' viewTimeline(cdw_conn = cdw, db_type = "mssql", background = FALSE)
 #'
-#' # Example 3: DuckDB with separate files
+#' # Example 3: DuckDB (always runs in blocking mode)
 #' library(duckdb)
 #'
 #' cdw <- dbConnect(duckdb(), "path/to/cdw.duckdb")
 #' mpi <- dbConnect(duckdb(), "path/to/mpi.duckdb")
 #'
+#' # DuckDB doesn't support background mode due to file locking
+#' # The app will run in blocking mode regardless of background setting
 #' viewTimeline(cdw_conn = cdw, mpi_conn = mpi, db_type = "duckdb")
 #' }
 #'
@@ -141,8 +146,15 @@ viewTimeline <- function(cdw_conn, mpi_conn = NULL, db_type = c("mssql", "duckdb
     stop("mpi_conn must be a DBI connection object or NULL", call. = FALSE)
   }
 
-  # Find the app directory
+  # DuckDB doesn't support background mode due to file locking constraints
+  # Force blocking mode and notify user
 
+  if (db_type == "duckdb" && background) {
+    message("Note: DuckDB connections always run in blocking mode due to file locking constraints.")
+    background <- FALSE
+  }
+
+  # Find the app directory
   app_dir <- system.file("example", package = "PatientTimelineViewer")
   if (app_dir == "") {
     stop("Could not find example app directory. Try reinstalling the package.",
@@ -167,17 +179,6 @@ viewTimeline <- function(cdw_conn, mpi_conn = NULL, db_type = c("mssql", "duckdb
     # For ODBC connections, we need to get DSN info
     cdw_info <- get_connection_info(cdw_conn)
     mpi_info <- if (!is.null(mpi_conn)) get_connection_info(mpi_conn) else NULL
-
-    # For DuckDB, we must close the connections before spawning the background
-    # process, because DuckDB doesn't allow multiple processes to open the same
-    # database file simultaneously
-    if (db_type == "duckdb") {
-      message("Closing DuckDB connections for background process...")
-      tryCatch(DBI::dbDisconnect(cdw_conn), error = function(e) NULL)
-      if (!is.null(mpi_conn) && !identical(cdw_conn, mpi_conn)) {
-        tryCatch(DBI::dbDisconnect(mpi_conn), error = function(e) NULL)
-      }
-    }
 
     url <- paste0("http://127.0.0.1:", port, "/")
 

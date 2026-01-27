@@ -24,13 +24,16 @@ database. Optional - can be NULL if MPI data is not available, or the
 same as cdw_conn if MPI tables are in the same database.}
 
 \item{db_type}{The database type, either "mssql" or "duckdb". This affects
-query parameter syntax and schema qualification.}
+query parameter syntax and schema qualification. Note: DuckDB connections
+always run in blocking mode (background = FALSE) due to DuckDB's file
+locking constraints.}
 
-\item{background}{Logical. If TRUE (the default), runs the app in a
+\item{background}{Logical. If TRUE (the default for MSSQL), runs the app in a
 background R process, allowing you to continue working in your R session.
 The app URL will be printed and opened in your browser. Use
 \code{\link{stopViewer}} to stop the background app. If FALSE, runs in
-the current session (blocking).}
+the current session (blocking). Note: This parameter is ignored for DuckDB
+connections, which always run in blocking mode.}
 
 \item{port}{The TCP port for the Shiny app. Default is 3838. Only used when
 background = TRUE.}
@@ -69,12 +72,14 @@ stopViewer()
 # Example 2: Blocking mode (traditional Shiny behavior)
 viewTimeline(cdw_conn = cdw, db_type = "mssql", background = FALSE)
 
-# Example 3: DuckDB with separate files
+# Example 3: DuckDB (always runs in blocking mode)
 library(duckdb)
 
 cdw <- dbConnect(duckdb(), "path/to/cdw.duckdb")
 mpi <- dbConnect(duckdb(), "path/to/mpi.duckdb")
 
+# DuckDB doesn't support background mode due to file locking
+# The app will run in blocking mode regardless of background setting
 viewTimeline(cdw_conn = cdw, mpi_conn = mpi, db_type = "duckdb")
 }
 

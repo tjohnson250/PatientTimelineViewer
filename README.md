@@ -55,21 +55,40 @@ DBI::dbExecute(cdw, "USE CDW")
 mpi <- dbConnect(odbc(), "MY_DSN")
 DBI::dbExecute(mpi, "USE MasterPatientIndex")
 
-# Launch the viewer with both connections
+# Launch the viewer with both connections (runs in background by default for MSSQL)
 viewTimeline(cdw_conn = cdw, mpi_conn = mpi, db_type = "mssql")
 
 # Or without MPI if you don't need source system info
 viewTimeline(cdw_conn = cdw, db_type = "mssql")
+
+# Stop the background viewer when done
+stopViewer()
+```
+
+**For DuckDB connections:**
+
+``` r
+library(PatientTimelineViewer)
+library(DBI)
+library(duckdb)
+
+cdw <- dbConnect(duckdb(), "path/to/cdw.duckdb")
+mpi <- dbConnect(duckdb(), "path/to/mpi.duckdb")
+
+# DuckDB always runs in blocking mode due to file locking constraints
+# The app will block your R session until closed
+viewTimeline(cdw_conn = cdw, mpi_conn = mpi, db_type = "duckdb")
 ```
 
 The `viewTimeline()` function accepts:
 - `cdw_conn`: DBI connection to the CDW (PCORnet CDM) database (required)
 - `mpi_conn`: DBI connection to the MPI (Master Patient Index) database (optional)
 - `db_type`: Either "mssql" or "duckdb"
+- `background`: For MSSQL, defaults to TRUE (non-blocking). Ignored for DuckDB (always FALSE).
 
 **About the MPI connection:** The MPI database contains source system mappings (tables: `Mpi`, `MPI_Src`, `EnterpriseRecords_Ext`) that show which source systems contributed data for a patient. If you don't have an MPI database or don't need this information, you can pass `NULL` for `mpi_conn` - the app will work normally but won't display source system information in the demographics panel.
 
-Note: Connections you pass to `viewTimeline()` are not closed when the app exits - you manage their lifecycle.
+**Note:** For MSSQL connections with `background = TRUE`, connections you pass to `viewTimeline()` are not closed when the app exits - you manage their lifecycle. For DuckDB or `background = FALSE`, the app uses your connections directly.
 
 ### Option 3: Custom config.yml with R_CONFIG_FILE
 

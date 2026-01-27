@@ -83,6 +83,14 @@ timeline_ui <- function() {
             $('[data-toggle=\"tooltip\"]').tooltip();
           }, 100);
         });
+
+        // Trigger load_patient button when Enter is pressed in patid input
+        $(document).on('keypress', '#patid', function(e) {
+          if (e.which == 13) {
+            e.preventDefault();
+            $('#load_patient').click();
+          }
+        });
       "))
     ),
 
@@ -609,11 +617,63 @@ timeline_server <- function(input, output, session) {
     types
   })
 
-  # Source system color palette (matches CSS)
+  # Source system color palette (matches CSS variables)
   source_colors <- c(
     "#FF6B35", "#2EC4B6", "#9B59B6", "#3498DB",
     "#E74C3C", "#27AE60", "#F39C12", "#1ABC9C"
   )
+
+  # Predefined source-to-color mappings (must match CSS rules in custom.css)
+  # These are the named EMR systems with fixed color assignments
+  predefined_source_colors <- c(
+    "EPIC" = 1,
+    "CERNER" = 2,
+    "MEDITECH" = 3,
+    "ALLSCRIPTS" = 4,
+    "ATHENA" = 5,
+    "NEXTGEN" = 6,
+    "ECLINICALWORKS" = 7,
+    "VERADIGM" = 8
+  )
+
+  # Helper function to get color for a source code
+  # Returns the color based on predefined mappings or assigns dynamically
+  get_source_color <- function(source_code, all_source_codes) {
+    # Clean the source code (same as CSS class generation)
+    clean_code <- gsub("[^A-Za-z0-9]", "", toupper(source_code))
+
+    # Check if it matches a predefined named system
+    if (clean_code %in% names(predefined_source_colors)) {
+      idx <- predefined_source_colors[[clean_code]]
+      return(source_colors[idx])
+    }
+
+    # Check if it's a numeric code (1, 2, etc.) or SRC1, SRC2 pattern
+    if (grepl("^[0-9]+$", clean_code)) {
+      idx <- as.integer(clean_code)
+      if (idx >= 1 && idx <= 8) {
+        return(source_colors[idx])
+      }
+    }
+    if (grepl("^SRC[0-9]+$", clean_code)) {
+      idx <- as.integer(gsub("SRC", "", clean_code))
+      if (idx >= 1 && idx <= 8) {
+        return(source_colors[idx])
+      }
+    }
+
+    # For unknown sources, assign based on position in the source list
+    # This ensures consistent color assignment across legend and timeline
+    clean_all <- gsub("[^A-Za-z0-9]", "", toupper(all_source_codes))
+    position <- which(clean_all == clean_code)[1]
+    if (!is.na(position)) {
+      idx <- ((position - 1) %% length(source_colors)) + 1
+      return(source_colors[idx])
+    }
+
+    # Fallback to first color
+    return(source_colors[1])
+  }
 
   # Render source system checkboxes
   output$source_system_checkboxes <- renderUI({
@@ -655,9 +715,11 @@ timeline_server <- function(input, output, session) {
 
     if (nrow(sources) == 0) return(NULL)
 
+    all_source_codes <- sources$source_code
+
     legend_items <- lapply(1:nrow(sources), function(i) {
       src <- sources[i, ]
-      color <- source_colors[((i - 1) %% length(source_colors)) + 1]
+      color <- get_source_color(src$source_code, all_source_codes)
 
       tags$span(
         class = "source-legend-item",
@@ -678,6 +740,41 @@ timeline_server <- function(input, output, session) {
       tags$span(class = "source-legend-title", "Legend: "),
       div(class = "source-legend-items", legend_items)
     )
+  })
+
+  # Inject dynamic CSS for source system colors when patient loads
+  # This ensures sources not in the predefined CSS get proper colors
+  observe({
+    req(rv$patient_data)
+
+    sources <- get_source_systems(rv$patient_data)
+    if (nrow(sources) == 0) return()
+
+    all_source_codes <- sources$source_code
+
+    # Build CSS rules for each source
+    css_rules <- sapply(all_source_codes, function(src_code) {
+      color <- get_source_color(src_code, all_source_codes)
+      # Generate CSS class name same way as data_transforms.R
+      clean_code <- gsub("[^A-Za-z0-9]", "", src_code)
+      sprintf(".vis-item.source-%s { border-left-color: %s !important; }", clean_code, color)
+    })
+
+    # Inject CSS via JavaScript
+    css_text <- paste(css_rules, collapse = "\n")
+    js_code <- sprintf("
+      (function() {
+        var styleId = 'dynamic-source-colors';
+        var existing = document.getElementById(styleId);
+        if (existing) existing.remove();
+        var style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = %s;
+        document.head.appendChild(style);
+      })();
+    ", shQuote(css_text))
+
+    shinyjs::runjs(js_code)
   })
 
   # Get selected source systems

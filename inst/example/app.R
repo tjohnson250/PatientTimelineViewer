@@ -1,5 +1,5 @@
-# app.R - Patient Timeline Viewer
-# Main Shiny application for viewing patient clinical data timeline
+# app.R - Patient Timeline Viewer Example Application
+# This is the demo app for the PatientTimelineViewer package
 
 library(shiny)
 library(shinyjs)
@@ -7,16 +7,9 @@ library(timevis)
 library(dplyr)
 library(lubridate)
 library(DBI)
-library(odbc)
 library(config)
 library(htmltools)
-
-# Source helper modules
-source("R/db_queries.R")
-source("R/data_transforms.R")
-source("R/aggregation.R")
-source("R/filter_helpers.R")
-source("R/semantic_filter.R")
+library(PatientTimelineViewer)
 
 # Check for Anthropic API key (warn if not present)
 if (Sys.getenv("ANTHROPIC_API_KEY") == "") {

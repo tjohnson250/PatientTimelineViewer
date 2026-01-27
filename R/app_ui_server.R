@@ -18,6 +18,7 @@ timeline_ui <- function() {
       tags$link(rel = "stylesheet", type = "text/css", href = "custom.css"),
       tags$script(src = "cluster-colors.js"),
       tags$script(src = "timeline-markers.js"),
+      tags$script(src = "timeline-resizer.js"),
       tags$style(HTML("
         .shiny-notification {
           position: fixed;
@@ -38,10 +39,24 @@ timeline_ui <- function() {
         // Preserve timeline window when re-rendering
         var savedTimelineWindow = null;
 
+        // Helper to check if input change should preserve timeline window
+        function shouldPreserveWindow(inputName) {
+          // Preserve window for these filter types:
+          // - Event type checkboxes (show_encounters, show_diagnoses, etc.)
+          // - Source system checkboxes (show_source_*)
+          // - Clustering and aggregation
+          if (inputName === 'enable_clustering' || inputName === 'aggregation') {
+            return true;
+          }
+          if (inputName && inputName.startsWith('show_')) {
+            return true;
+          }
+          return false;
+        }
+
         // Save window before timeline updates
         $(document).on('shiny:inputchanged', function(event) {
-          // Save window when clustering or aggregation changes
-          if (event.name === 'enable_clustering' || event.name === 'aggregation') {
+          if (shouldPreserveWindow(event.name)) {
             var widget = HTMLWidgets.find('#timeline');
             if (widget && widget.timeline) {
               var window = widget.timeline.getWindow();
@@ -49,7 +64,7 @@ timeline_ui <- function() {
                 start: window.start.getTime(),
                 end: window.end.getTime()
               };
-              console.log('Saved timeline window for', event.name, ':', savedTimelineWindow);
+              console.log('Saved timeline window for', event.name);
             }
           }
         });
@@ -376,8 +391,15 @@ timeline_ui <- function() {
           )
         ),
         div(
-          style = "height: 600px; overflow-y: auto;",
-          timevis::timevisOutput("timeline", height = "600px")
+          id = "timeline-wrapper",
+          class = "timeline-wrapper",
+          style = "height: 600px; overflow-y: auto; position: relative;",
+          timevis::timevisOutput("timeline", height = "100%"),
+          div(
+            id = "timeline-resize-handle",
+            class = "timeline-resize-handle",
+            title = "Drag to resize timeline"
+          )
         )
       ),
 

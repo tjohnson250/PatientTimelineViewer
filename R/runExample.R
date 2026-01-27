@@ -173,9 +173,24 @@ viewTimeline <- function(cdw_conn, mpi_conn = NULL, db_type = c("mssql", "duckdb
     # Launch in background process
     .ptv_env$process <- callr::r_bg(
       function(app_dir, cdw_info, mpi_info, db_type, port) {
+        # Helper to recreate connection (inlined since we're in a subprocess)
+        recreate_conn <- function(info) {
+          if (info$type == "odbc") {
+            conn <- DBI::dbConnect(odbc::odbc(), info$dsn)
+            if (!is.null(info$database) && info$database != "") {
+              DBI::dbExecute(conn, paste("USE", info$database))
+            }
+            conn
+          } else if (info$type == "duckdb") {
+            DBI::dbConnect(duckdb::duckdb(), dbdir = info$dbdir, read_only = FALSE)
+          } else {
+            stop("Cannot recreate connection of type: ", info$type, call. = FALSE)
+          }
+        }
+
         # Recreate connections in the subprocess
-        cdw_conn <- recreate_connection(cdw_info)
-        mpi_conn <- if (!is.null(mpi_info)) recreate_connection(mpi_info) else NULL
+        cdw_conn <- recreate_conn(cdw_info)
+        mpi_conn <- if (!is.null(mpi_info)) recreate_conn(mpi_info) else NULL
 
         # Set package state
         PatientTimelineViewer:::.pkg_state$db_type <- db_type
@@ -309,7 +324,8 @@ getViewerURL <- function() {
 
 # Helper function to extract connection info for recreation in subprocess
 get_connection_info <- function(conn) {
-  if (inherits(conn, "Microsoft SQL Server")) {
+  # Check for ODBC connection (various class names depending on driver)
+  if (inherits(conn, "OdbcConnection") || inherits(conn, "Microsoft SQL Server")) {
     # ODBC connection
     info <- DBI::dbGetInfo(conn)
     list(

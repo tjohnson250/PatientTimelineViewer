@@ -1,5 +1,5 @@
-# app.R - Patient Timeline Viewer Example Application
-# This is the demo app for the PatientTimelineViewer package
+# app.R - Patient Timeline Viewer
+# Main Shiny application for viewing patient clinical data timeline
 
 library(shiny)
 library(shinyjs)
@@ -7,9 +7,16 @@ library(timevis)
 library(dplyr)
 library(lubridate)
 library(DBI)
+library(odbc)
 library(config)
 library(htmltools)
-library(PatientTimelineViewer)
+
+# Source helper modules
+source("R/db_queries.R")
+source("R/data_transforms.R")
+source("R/aggregation.R")
+source("R/filter_helpers.R")
+source("R/semantic_filter.R")
 
 # Check for Anthropic API key (warn if not present)
 if (Sys.getenv("ANTHROPIC_API_KEY") == "") {
@@ -214,7 +221,7 @@ ui <- fluidPage(
           uiOutput("event_type_checkboxes")
         )
       ),
-      
+
       # Date range
       fluidRow(
         column(6,
@@ -336,6 +343,26 @@ ui <- fluidPage(
       )
     ),
     
+    # Source system filter section
+    div(
+      class = "filter-panel",
+      div(
+        class = "source-filter-section",
+        div(
+          style = "margin-bottom: 10px;",
+          strong("Source Systems:"),
+          tags$i(
+            class = "fa fa-question-circle help-icon",
+            `data-toggle` = "tooltip",
+            `data-placement` = "top",
+            title = "Filter events by their originating source system (EMR). Colored left borders on timeline events indicate source."
+          )
+        ),
+        uiOutput("source_system_checkboxes"),
+        uiOutput("source_legend")
+      )
+    ),
+
     # Timeline container
     div(
       class = "timeline-container",
@@ -430,19 +457,8 @@ server <- function(input, output, session) {
   })
   outputOptions(output, "show_related_button", suspendWhenHidden = FALSE)
   
-
   # Initialize database connections
-  # Check for pre-supplied connections from viewTimeline() first
   observe({
-    # Check if connections were passed via viewTimeline()
-    supplied_conns <- getShinyOption("ptv_connections")
-    if (!is.null(supplied_conns)) {
-      rv$db_connections <- supplied_conns
-      message("Using pre-supplied database connections")
-      return()
-    }
-
-    # Fall back to config-based connections
     tryCatch({
       rv$db_connections <- get_db_connections()
     }, error = function(e) {
@@ -453,12 +469,10 @@ server <- function(input, output, session) {
       )
     })
   })
-
+  
   # Clean up connections on session end
-  # Note: Don't close connections if they were supplied externally
   onSessionEnded(function() {
-    supplied_conns <- getShinyOption("ptv_connections")
-    if (is.null(supplied_conns) && !is.null(isolate(rv$db_connections))) {
+    if (!is.null(isolate(rv$db_connections))) {
       close_db_connections(isolate(rv$db_connections))
     }
   })
@@ -579,7 +593,102 @@ server <- function(input, output, session) {
     if (isTRUE(input$show_conditions)) types <- c(types, "conditions")
     types
   })
-  
+
+  # Source system color palette (matches CSS)
+  source_colors <- c(
+    "#FF6B35", "#2EC4B6", "#9B59B6", "#3498DB",
+    "#E74C3C", "#27AE60", "#F39C12", "#1ABC9C"
+  )
+
+  # Render source system checkboxes
+  output$source_system_checkboxes <- renderUI({
+    req(rv$patient_data)
+
+    sources <- get_source_systems(rv$patient_data)
+
+    if (nrow(sources) == 0) {
+      return(tags$p(
+        class = "text-muted",
+        style = "font-size: 12px; font-style: italic;",
+        "No source system information available"
+      ))
+    }
+
+    checkboxes <- lapply(1:nrow(sources), function(i) {
+      src <- sources[i, ]
+      input_id <- paste0("show_source_", gsub("[^A-Za-z0-9]", "_", src$source_code))
+
+      tags$div(
+        class = "source-system-checkbox",
+        checkboxInput(
+          inputId = input_id,
+          label = src$display_label,
+          value = TRUE,
+          width = "auto"
+        )
+      )
+    })
+
+    div(style = "display: flex; flex-wrap: wrap; gap: 10px;", checkboxes)
+  })
+
+  # Render source system legend
+  output$source_legend <- renderUI({
+    req(rv$patient_data)
+
+    sources <- get_source_systems(rv$patient_data)
+
+    if (nrow(sources) == 0) return(NULL)
+
+    legend_items <- lapply(1:nrow(sources), function(i) {
+      src <- sources[i, ]
+      color <- source_colors[((i - 1) %% length(source_colors)) + 1]
+
+      tags$span(
+        class = "source-legend-item",
+        tags$span(
+          class = "source-legend-color",
+          style = paste0("background-color: ", color, ";")
+        ),
+        if (!is.na(src$source_description)) {
+          paste0(src$source_description, " (", src$source_code, ")")
+        } else {
+          src$source_code
+        }
+      )
+    })
+
+    div(
+      class = "source-legend",
+      tags$span(class = "source-legend-title", "Legend: "),
+      div(class = "source-legend-items", legend_items)
+    )
+  })
+
+  # Get selected source systems
+  get_selected_source_systems <- reactive({
+    req(rv$patient_data)
+
+    sources <- get_source_systems(rv$patient_data)
+
+    if (nrow(sources) == 0) return(NULL)
+
+    selected <- c()
+    for (i in 1:nrow(sources)) {
+      input_id <- paste0("show_source_", gsub("[^A-Za-z0-9]", "_", sources$source_code[i]))
+      if (isTRUE(input[[input_id]])) {
+        selected <- c(selected, sources$source_code[i])
+      }
+    }
+
+    # If all selected, return NULL (no filtering)
+    if (length(selected) == nrow(sources)) {
+      return(NULL)
+    }
+
+    selected
+  })
+
   # Filtered and aggregated events
   filtered_events <- reactive({
     req(rv$timeline_events)
@@ -594,7 +703,8 @@ server <- function(input, output, session) {
       lab_name = input$lab_name,
       med_name = input$med_name,
       semantic_results = if (rv$semantic_filter_active) rv$semantic_filter_results else NULL,
-      semantic_table = if (rv$semantic_filter_active) rv$semantic_filter_table else NULL
+      semantic_table = if (rv$semantic_filter_active) rv$semantic_filter_table else NULL,
+      source_systems = get_selected_source_systems()
     )
 
     # Apply filters
@@ -794,9 +904,41 @@ server <- function(input, output, session) {
     if (is.null(record) || nrow(record) == 0) {
       return(p("No details available for this event."))
     }
-    
-    # Build key-value display
+
+    # Build source system display if available
+    source_system_row <- NULL
+    if (!is.null(record) && "CDW_Source" %in% names(record) &&
+        !is.na(record$CDW_Source[1]) && record$CDW_Source[1] != "") {
+
+      source_code <- record$CDW_Source[1]
+      source_desc <- NA
+
+      # Look up description from source_descriptions
+      if (!is.null(rv$patient_data$source_descriptions) &&
+          nrow(rv$patient_data$source_descriptions) > 0) {
+        desc_row <- rv$patient_data$source_descriptions %>%
+          filter(SRC == source_code)
+        if (nrow(desc_row) > 0) {
+          source_desc <- desc_row$SourceDescription[1]
+        }
+      }
+
+      source_display <- if (!is.na(source_desc)) {
+        paste0(source_desc, " (", source_code, ")")
+      } else {
+        as.character(source_code)
+      }
+
+      source_system_row <- div(
+        class = "detail-row source-system-row",
+        span(class = "detail-key", "Source System"),
+        span(class = "detail-value", source_display)
+      )
+    }
+
+    # Build key-value display (exclude CDW_Source since we show it specially)
     detail_rows <- lapply(names(record), function(col) {
+      if (col == "CDW_Source") return(NULL)  # Skip - shown separately
       value <- record[[col]][1]
       if (!is.null(value) && !is.na(value) && as.character(value) != "") {
         div(
@@ -806,9 +948,10 @@ server <- function(input, output, session) {
         )
       }
     })
-    
+
     div(
       h5(paste("Source Table:", event$source_table)),
+      source_system_row,  # Show source system prominently at top
       div(Filter(Negate(is.null), detail_rows))
     )
   })

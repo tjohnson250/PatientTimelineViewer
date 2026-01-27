@@ -184,12 +184,57 @@ body {
   margin: 0;
 }
 
+/* Timeline wrapper and resizer */
+.timeline-wrapper {
+  position: relative;
+}
+
+.timeline-resize-handle {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: linear-gradient(to bottom,
+    transparent 0%,
+    rgba(52, 152, 219, 0.2) 100%);
+  cursor: ns-resize;
+  z-index: 1000;
+  transition: background 0.2s ease;
+}
+
+.timeline-resize-handle:hover {
+  background: linear-gradient(to bottom,
+    transparent 0%,
+    rgba(52, 152, 219, 0.4) 100%);
+}
+
+.timeline-resize-handle::after {
+  content: '\2261';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(52, 152, 219, 0.6);
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.timeline-resize-handle:hover::after {
+  color: rgba(52, 152, 219, 0.9);
+}
+
 /* Timeline event styling */
 .vis-timeline {
   border: none;
   font-family: inherit;
-  max-height: 600px !important;
+  height: 100% !important;
   overflow-y: auto !important;
+}
+
+/* Allow dynamic height when inside wrapper */
+.timeline-wrapper .vis-timeline {
+  max-height: none !important;
 }
 
 .vis-item {

@@ -4,3 +4,13 @@
 .Ruserdata
 .Renviron
 .DS_Store
+
+# R package build artifacts
+*.Rcheck/
+*.tar.gz
+src/*.o
+src/*.so
+src/*.dll
+
+# Claude Code
+.claude/

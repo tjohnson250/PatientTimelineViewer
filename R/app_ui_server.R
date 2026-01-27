@@ -436,6 +436,9 @@ timeline_server <- function(input, output, session) {
     semantic_filter_results = NULL
   )
 
+  # Stop app when browser session ends (makes closing browser tab stop the app)
+  session$onSessionEnded(stopApp)
+
   # Output to control conditional panels
   output$patient_loaded <- reactive({
     !is.null(rv$patient_data) && nrow(rv$patient_data$demographic) > 0

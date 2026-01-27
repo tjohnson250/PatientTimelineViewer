@@ -334,11 +334,11 @@ get_connection_info <- function(conn) {
       database = info$dbname
     )
   } else if (inherits(conn, "duckdb_connection")) {
-    # DuckDB connection
+    # DuckDB connection - field is "dbname" not "dbdir"
     info <- DBI::dbGetInfo(conn)
     list(
       type = "duckdb",
-      dbdir = info$dbdir
+      dbdir = info$dbname
     )
   } else {
     # Generic - try to get info

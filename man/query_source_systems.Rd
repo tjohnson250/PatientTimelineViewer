@@ -9,7 +9,7 @@ query_source_systems(mpi_conn, patid)
 \arguments{
 \item{mpi_conn}{MPI database connection}
 
-\item{patid}{Patient ID (unified PATID)}
+\item{patid}{Patient ID (unified PATID = UID in MPI)}
 }
 \value{
 Data frame with source system mappings

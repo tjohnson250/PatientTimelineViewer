@@ -26,6 +26,7 @@ Suggests:
     odbc,
     duckdb,
     httr2,
+    callr,
     testthat (>= 3.0.0),
     knitr,
     quarto

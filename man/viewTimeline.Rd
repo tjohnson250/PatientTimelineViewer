@@ -4,7 +4,15 @@
 \alias{viewTimeline}
 \title{Launch Timeline Viewer with Custom Database Connections}
 \usage{
-viewTimeline(cdw_conn, mpi_conn = NULL, db_type = c("mssql", "duckdb"), ...)
+viewTimeline(
+  cdw_conn,
+  mpi_conn = NULL,
+  db_type = c("mssql", "duckdb"),
+  background = TRUE,
+  port = 3838,
+  launch.browser = TRUE,
+  ...
+)
 }
 \arguments{
 \item{cdw_conn}{A DBI connection object to the CDW (PCORnet CDM) database.
@@ -18,10 +26,24 @@ same as cdw_conn if MPI tables are in the same database.}
 \item{db_type}{The database type, either "mssql" or "duckdb". This affects
 query parameter syntax and schema qualification.}
 
+\item{background}{Logical. If TRUE (the default), runs the app in a
+background R process, allowing you to continue working in your R session.
+The app URL will be printed and opened in your browser. Use
+\code{\link{stopViewer}} to stop the background app. If FALSE, runs in
+the current session (blocking).}
+
+\item{port}{The TCP port for the Shiny app. Default is 3838. Only used when
+background = TRUE.}
+
+\item{launch.browser}{Logical. Should the app be opened in a browser?
+Default is TRUE.}
+
 \item{...}{Additional arguments passed to \code{\link[shiny]{runApp}}.}
 }
 \value{
-This function does not return a value; it launches a Shiny app.
+If background = TRUE, returns invisibly a list with the process
+handle and URL. If background = FALSE, does not return (blocks until
+app closes).
 }
 \description{
 Launch the Patient Timeline Viewer Shiny application using user-supplied
@@ -31,7 +53,7 @@ databases in the same session.
 }
 \examples{
 \dontrun{
-# Example 1: From a Quarto document with ODBC connection
+# Example 1: From a Quarto document with ODBC connection (non-blocking)
 library(DBI)
 library(odbc)
 
@@ -39,17 +61,24 @@ cdw <- dbConnect(odbc(), "MY_CDW_DSN")
 DBI::dbExecute(cdw, "USE CDW")
 
 viewTimeline(cdw_conn = cdw, mpi_conn = cdw, db_type = "mssql")
+# App runs in background, continue working...
 
-# Example 2: DuckDB with separate files
+# When done:
+stopViewer()
+
+# Example 2: Blocking mode (traditional Shiny behavior)
+viewTimeline(cdw_conn = cdw, db_type = "mssql", background = FALSE)
+
+# Example 3: DuckDB with separate files
 library(duckdb)
 
 cdw <- dbConnect(duckdb(), "path/to/cdw.duckdb")
 mpi <- dbConnect(duckdb(), "path/to/mpi.duckdb")
 
 viewTimeline(cdw_conn = cdw, mpi_conn = mpi, db_type = "duckdb")
-
-# Example 3: Without MPI database
-viewTimeline(cdw_conn = cdw, db_type = "mssql")
 }
 
+}
+\seealso{
+\code{\link{stopViewer}} to stop a background viewer
 }

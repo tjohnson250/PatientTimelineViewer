@@ -450,9 +450,21 @@ timeline_server <- function(input, output, session) {
   outputOptions(output, "show_related_button", suspendWhenHidden = FALSE)
 
   # Initialize database connections
+  # Check for user-supplied connections (from viewTimeline()) first,
+
+  # otherwise fall back to config.yml via get_db_connections()
   observe({
     tryCatch({
-      rv$db_connections <- get_db_connections()
+      # Check if connections were passed via viewTimeline()
+      supplied_conns <- shiny::getShinyOption("ptv_connections")
+      if (!is.null(supplied_conns)) {
+        rv$db_connections <- supplied_conns
+        # Also set the db_type in package state for query syntax
+        .pkg_state$db_type <- supplied_conns$db_type
+        message("Using supplied database connections (db_type: ", supplied_conns$db_type, ")")
+      } else {
+        rv$db_connections <- get_db_connections()
+      }
     }, error = function(e) {
       showNotification(
         paste("Database connection error:", e$message),
@@ -463,9 +475,17 @@ timeline_server <- function(input, output, session) {
   })
 
   # Clean up connections on session end
+  # Only close connections if we created them (not user-supplied via viewTimeline)
   onSessionEnded(function() {
-    if (!is.null(isolate(rv$db_connections))) {
-      close_db_connections(isolate(rv$db_connections))
+    conns <- isolate(rv$db_connections)
+    if (!is.null(conns)) {
+      # Check if these were supplied externally - if so, don't close them
+      supplied_conns <- shiny::getShinyOption("ptv_connections")
+      if (is.null(supplied_conns)) {
+        # We created these connections, so we close them
+        close_db_connections(conns)
+      }
+      # If user supplied connections, they're responsible for closing them
     }
   })
 

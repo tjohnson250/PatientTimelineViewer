@@ -80,6 +80,23 @@ mpi <- dbConnect(duckdb(), "path/to/mpi.duckdb")
 viewTimeline(cdw_conn = cdw, mpi_conn = mpi, db_type = "duckdb")
 ```
 
+**Using bundled sample data with viewTimeline():**
+
+If you want to use `viewTimeline()` with the bundled sample data (instead of `runExample()`), use `get_sample_data_path()` to get the paths:
+
+``` r
+library(PatientTimelineViewer)
+library(DBI)
+library(duckdb)
+
+# Get paths to bundled sample databases
+cdw <- dbConnect(duckdb(), get_sample_data_path("cdw"))
+mpi <- dbConnect(duckdb(), get_sample_data_path("mpi"))
+
+# Launch with sample data
+viewTimeline(cdw_conn = cdw, mpi_conn = mpi, db_type = "duckdb")
+```
+
 The `viewTimeline()` function accepts:
 - `cdw_conn`: DBI connection to the CDW (PCORnet CDM) database (required)
 - `mpi_conn`: DBI connection to the MPI (Master Patient Index) database (optional)

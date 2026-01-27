@@ -14,3 +14,6 @@ src/*.dll
 
 # Claude Code
 .claude/
+
+# Local development data (sample data is in inst/extdata/)
+data/

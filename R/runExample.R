@@ -168,6 +168,17 @@ viewTimeline <- function(cdw_conn, mpi_conn = NULL, db_type = c("mssql", "duckdb
     cdw_info <- get_connection_info(cdw_conn)
     mpi_info <- if (!is.null(mpi_conn)) get_connection_info(mpi_conn) else NULL
 
+    # For DuckDB, we must close the connections before spawning the background
+    # process, because DuckDB doesn't allow multiple processes to open the same
+    # database file simultaneously
+    if (db_type == "duckdb") {
+      message("Closing DuckDB connections for background process...")
+      tryCatch(DBI::dbDisconnect(cdw_conn), error = function(e) NULL)
+      if (!is.null(mpi_conn) && !identical(cdw_conn, mpi_conn)) {
+        tryCatch(DBI::dbDisconnect(mpi_conn), error = function(e) NULL)
+      }
+    }
+
     url <- paste0("http://127.0.0.1:", port, "/")
 
     # Launch in background process

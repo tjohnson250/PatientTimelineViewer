@@ -272,24 +272,20 @@ query_source_descriptions <- function(mpi_conn) {
 
 #' Query source system mappings from MPI
 #' @param mpi_conn MPI database connection
-#' @param patid Patient ID (unified PATID)
+#' @param patid Patient ID (unified PATID = UID in MPI)
 #' @return Data frame with source system mappings
 query_source_systems <- function(mpi_conn, patid) {
-  # First get the UID from the CDW PATID
+  # PATID and UID are equivalent in this schema (both are 'PAT0000001' format)
   # The MPI table links Src (source), Lid (local ID), and Uid (unified ID)
   sql <- "
-    SELECT 
+    SELECT
       m.Src,
       m.Lid,
       m.Uid,
       s.Description as SourceDescription
     FROM dbo.Mpi m
     LEFT JOIN dbo.MPI_Src s ON m.Src = s.SRC
-    WHERE m.Uid = (
-      SELECT DISTINCT Uid
-      FROM dbo.EnterpriseRecords_Ext
-      WHERE CDM_PATID = ?
-    )
+    WHERE m.Uid = ?
   "
   execute_query(mpi_conn, sql, params = list(patid))
 }

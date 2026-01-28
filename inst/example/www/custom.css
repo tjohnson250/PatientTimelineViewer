@@ -267,156 +267,285 @@ body {
   padding: 4px 10px;
 }
 
-/* Event type colors - lighter, more subtle */
-.vis-item.event-encounter {
+/* ============================================
+   Color Scheme: Event Type (default)
+   Applied when body has color-by-event-type class or no color scheme class
+   ============================================ */
+body:not(.color-by-source-system) .vis-item.event-encounter,
+body.color-by-event-type .vis-item.event-encounter {
   background-color: #d4e4f7;
   border-color: #a8c5e8;
   color: #2c3e50;
 }
 
-.vis-item.event-diagnosis {
+body:not(.color-by-source-system) .vis-item.event-diagnosis,
+body.color-by-event-type .vis-item.event-diagnosis {
   background-color: #fadbd8;
   border-color: #f5b7b1;
   color: #2c3e50;
 }
 
-.vis-item.event-procedure {
+body:not(.color-by-source-system) .vis-item.event-procedure,
+body.color-by-event-type .vis-item.event-procedure {
   background-color: #e8daef;
   border-color: #d2b4de;
   color: #2c3e50;
 }
 
-.vis-item.event-lab {
+body:not(.color-by-source-system) .vis-item.event-lab,
+body.color-by-event-type .vis-item.event-lab {
   background-color: #d5f4e6;
   border-color: #a9dfbf;
   color: #2c3e50;
 }
 
-.vis-item.event-lab-abnormal {
+body:not(.color-by-source-system) .vis-item.event-lab-abnormal,
+body.color-by-event-type .vis-item.event-lab-abnormal {
   background-color: #fadbd8;
-  border: 2px solid #e74c3c !important;
+  border: 2px solid #e74c3c;
   color: #2c3e50;
 }
 
-.vis-item.event-prescribing {
+body:not(.color-by-source-system) .vis-item.event-prescribing,
+body.color-by-event-type .vis-item.event-prescribing {
   background-color: #fae5d3;
   border-color: #f5cba7;
   color: #2c3e50;
 }
 
-.vis-item.event-dispensing {
+body:not(.color-by-source-system) .vis-item.event-dispensing,
+body.color-by-event-type .vis-item.event-dispensing {
   background-color: #fdebd0;
   border-color: #fad7a0;
   color: #2c3e50;
 }
 
-.vis-item.event-vital {
+body:not(.color-by-source-system) .vis-item.event-vital,
+body.color-by-event-type .vis-item.event-vital {
   background-color: #d0ece7;
   border-color: #a2d9ce;
   color: #2c3e50;
 }
 
-.vis-item.event-condition {
+body:not(.color-by-source-system) .vis-item.event-condition,
+body.color-by-event-type .vis-item.event-condition {
   background-color: #f8d7da;
   border-color: #f5c6cb;
   color: #2c3e50;
 }
 
-/* Clustered event colors - use same lighter colors as individual events */
-.vis-item.vis-cluster.event-encounter {
+/* ============================================
+   Color Scheme: Source System
+   Applied when body has color-by-source-system class
+   ============================================ */
+body.color-by-source-system .vis-item.source-1 {
+  background-color: #FFE5D9;
+  border-color: #FF6B35;
+  color: #2c3e50;
+}
+
+body.color-by-source-system .vis-item.source-2 {
+  background-color: #D4F5F0;
+  border-color: #2EC4B6;
+  color: #2c3e50;
+}
+
+body.color-by-source-system .vis-item.source-3 {
+  background-color: #E8DAEF;
+  border-color: #9B59B6;
+  color: #2c3e50;
+}
+
+body.color-by-source-system .vis-item.source-4 {
+  background-color: #D4E4F7;
+  border-color: #3498DB;
+  color: #2c3e50;
+}
+
+body.color-by-source-system .vis-item.source-5 {
+  background-color: #FADBD8;
+  border-color: #E74C3C;
+  color: #2c3e50;
+}
+
+body.color-by-source-system .vis-item.source-6 {
+  background-color: #D5F4E6;
+  border-color: #27AE60;
+  color: #2c3e50;
+}
+
+body.color-by-source-system .vis-item.source-7 {
+  background-color: #FDEBD0;
+  border-color: #F39C12;
+  color: #2c3e50;
+}
+
+body.color-by-source-system .vis-item.source-8 {
+  background-color: #D0F0ED;
+  border-color: #1ABC9C;
+  color: #2c3e50;
+}
+
+/* Clustered event colors - Event Type scheme (default) */
+body:not(.color-by-source-system) .vis-item.vis-cluster.event-encounter,
+body.color-by-event-type .vis-item.vis-cluster.event-encounter {
   background-color: #d4e4f7;
   border-color: #a8c5e8;
   color: #2c3e50;
 }
 
-.vis-item.vis-cluster.event-diagnosis {
+body:not(.color-by-source-system) .vis-item.vis-cluster.event-diagnosis,
+body.color-by-event-type .vis-item.vis-cluster.event-diagnosis {
   background-color: #fadbd8;
   border-color: #f5b7b1;
   color: #2c3e50;
 }
 
-.vis-item.vis-cluster.event-procedure {
+body:not(.color-by-source-system) .vis-item.vis-cluster.event-procedure,
+body.color-by-event-type .vis-item.vis-cluster.event-procedure {
   background-color: #e8daef;
   border-color: #d2b4de;
   color: #2c3e50;
 }
 
-.vis-item.vis-cluster.event-lab {
+body:not(.color-by-source-system) .vis-item.vis-cluster.event-lab,
+body.color-by-event-type .vis-item.vis-cluster.event-lab {
   background-color: #d5f4e6;
   border-color: #a9dfbf;
   color: #2c3e50;
 }
 
-.vis-item.vis-cluster.event-prescribing {
+body:not(.color-by-source-system) .vis-item.vis-cluster.event-prescribing,
+body.color-by-event-type .vis-item.vis-cluster.event-prescribing {
   background-color: #fae5d3;
   border-color: #f5cba7;
   color: #2c3e50;
 }
 
-.vis-item.vis-cluster.event-dispensing {
+body:not(.color-by-source-system) .vis-item.vis-cluster.event-dispensing,
+body.color-by-event-type .vis-item.vis-cluster.event-dispensing {
   background-color: #fdebd0;
   border-color: #fad7a0;
   color: #2c3e50;
 }
 
-.vis-item.vis-cluster.event-vital {
+body:not(.color-by-source-system) .vis-item.vis-cluster.event-vital,
+body.color-by-event-type .vis-item.vis-cluster.event-vital {
   background-color: #d0ece7;
   border-color: #a2d9ce;
   color: #2c3e50;
 }
 
-.vis-item.vis-cluster.event-condition {
+body:not(.color-by-source-system) .vis-item.vis-cluster.event-condition,
+body.color-by-event-type .vis-item.vis-cluster.event-condition {
   background-color: #f8d7da;
   border-color: #f5c6cb;
   color: #2c3e50;
 }
 
-/* Alternative: Color clusters by group (row) they appear in - also using lighter colors */
-.vis-item.vis-cluster[data-group="encounters"] {
+/* Cluster colors by group (row) - Event Type scheme */
+body:not(.color-by-source-system) .vis-item.vis-cluster[data-group="encounters"],
+body.color-by-event-type .vis-item.vis-cluster[data-group="encounters"] {
   background-color: #d4e4f7 !important;
   border-color: #a8c5e8 !important;
   color: #2c3e50 !important;
 }
 
-.vis-item.vis-cluster[data-group="diagnoses"] {
+body:not(.color-by-source-system) .vis-item.vis-cluster[data-group="diagnoses"],
+body.color-by-event-type .vis-item.vis-cluster[data-group="diagnoses"] {
   background-color: #fadbd8 !important;
   border-color: #f5b7b1 !important;
   color: #2c3e50 !important;
 }
 
-.vis-item.vis-cluster[data-group="procedures"] {
+body:not(.color-by-source-system) .vis-item.vis-cluster[data-group="procedures"],
+body.color-by-event-type .vis-item.vis-cluster[data-group="procedures"] {
   background-color: #e8daef !important;
   border-color: #d2b4de !important;
   color: #2c3e50 !important;
 }
 
-.vis-item.vis-cluster[data-group="labs"] {
+body:not(.color-by-source-system) .vis-item.vis-cluster[data-group="labs"],
+body.color-by-event-type .vis-item.vis-cluster[data-group="labs"] {
   background-color: #d5f4e6 !important;
   border-color: #a9dfbf !important;
   color: #2c3e50 !important;
 }
 
-.vis-item.vis-cluster[data-group="prescribing"] {
+body:not(.color-by-source-system) .vis-item.vis-cluster[data-group="prescribing"],
+body.color-by-event-type .vis-item.vis-cluster[data-group="prescribing"] {
   background-color: #fae5d3 !important;
   border-color: #f5cba7 !important;
   color: #2c3e50 !important;
 }
 
-.vis-item.vis-cluster[data-group="dispensing"] {
+body:not(.color-by-source-system) .vis-item.vis-cluster[data-group="dispensing"],
+body.color-by-event-type .vis-item.vis-cluster[data-group="dispensing"] {
   background-color: #fdebd0 !important;
   border-color: #fad7a0 !important;
   color: #2c3e50 !important;
 }
 
-.vis-item.vis-cluster[data-group="vitals"] {
+body:not(.color-by-source-system) .vis-item.vis-cluster[data-group="vitals"],
+body.color-by-event-type .vis-item.vis-cluster[data-group="vitals"] {
   background-color: #d0ece7 !important;
   border-color: #a2d9ce !important;
   color: #2c3e50 !important;
 }
 
-.vis-item.vis-cluster[data-group="conditions"] {
+body:not(.color-by-source-system) .vis-item.vis-cluster[data-group="conditions"],
+body.color-by-event-type .vis-item.vis-cluster[data-group="conditions"] {
   background-color: #f8d7da !important;
   border-color: #f5c6cb !important;
+  color: #2c3e50 !important;
+}
+
+/* Clustered event colors - Source System scheme */
+body.color-by-source-system .vis-item.vis-cluster.source-1 {
+  background-color: #FFE5D9 !important;
+  border-color: #FF6B35 !important;
+  color: #2c3e50 !important;
+}
+
+body.color-by-source-system .vis-item.vis-cluster.source-2 {
+  background-color: #D4F5F0 !important;
+  border-color: #2EC4B6 !important;
+  color: #2c3e50 !important;
+}
+
+body.color-by-source-system .vis-item.vis-cluster.source-3 {
+  background-color: #E8DAEF !important;
+  border-color: #9B59B6 !important;
+  color: #2c3e50 !important;
+}
+
+body.color-by-source-system .vis-item.vis-cluster.source-4 {
+  background-color: #D4E4F7 !important;
+  border-color: #3498DB !important;
+  color: #2c3e50 !important;
+}
+
+body.color-by-source-system .vis-item.vis-cluster.source-5 {
+  background-color: #FADBD8 !important;
+  border-color: #E74C3C !important;
+  color: #2c3e50 !important;
+}
+
+body.color-by-source-system .vis-item.vis-cluster.source-6 {
+  background-color: #D5F4E6 !important;
+  border-color: #27AE60 !important;
+  color: #2c3e50 !important;
+}
+
+body.color-by-source-system .vis-item.vis-cluster.source-7 {
+  background-color: #FDEBD0 !important;
+  border-color: #F39C12 !important;
+  color: #2c3e50 !important;
+}
+
+body.color-by-source-system .vis-item.vis-cluster.source-8 {
+  background-color: #D0F0ED !important;
+  border-color: #1ABC9C !important;
   color: #2c3e50 !important;
 }
 
@@ -720,10 +849,10 @@ body {
 }
 
 /* ============================================
-   Source System Visual Indicators
+   Source System Support
    ============================================ */
 
-/* Source system color palette */
+/* Source system color palette (referenced by JavaScript legend) */
 :root {
   --source-color-1: #FF6B35;  /* Orange */
   --source-color-2: #2EC4B6;  /* Teal */
@@ -734,39 +863,6 @@ body {
   --source-color-7: #F39C12;  /* Amber */
   --source-color-8: #1ABC9C;  /* Mint */
   --source-color-mixed: #7F8C8D;  /* Gray for mixed sources */
-}
-
-/* Base style for all source-tagged items */
-.vis-item[class*="source-"] {
-  border-left-width: 4px !important;
-  border-left-style: solid !important;
-}
-
-/* Named source systems - common EMR systems */
-.vis-item.source-EPIC { border-left-color: var(--source-color-1) !important; }
-.vis-item.source-CERNER { border-left-color: var(--source-color-2) !important; }
-.vis-item.source-MEDITECH { border-left-color: var(--source-color-3) !important; }
-.vis-item.source-ALLSCRIPTS { border-left-color: var(--source-color-4) !important; }
-.vis-item.source-ATHENA { border-left-color: var(--source-color-5) !important; }
-.vis-item.source-NEXTGEN { border-left-color: var(--source-color-6) !important; }
-.vis-item.source-ECLINICALWORKS { border-left-color: var(--source-color-7) !important; }
-.vis-item.source-VERADIGM { border-left-color: var(--source-color-8) !important; }
-
-/* Generic numbered sources for fallback */
-.vis-item.source-1, .vis-item.source-SRC1 { border-left-color: var(--source-color-1) !important; }
-.vis-item.source-2, .vis-item.source-SRC2 { border-left-color: var(--source-color-2) !important; }
-.vis-item.source-3, .vis-item.source-SRC3 { border-left-color: var(--source-color-3) !important; }
-.vis-item.source-4, .vis-item.source-SRC4 { border-left-color: var(--source-color-4) !important; }
-.vis-item.source-5, .vis-item.source-SRC5 { border-left-color: var(--source-color-5) !important; }
-.vis-item.source-6, .vis-item.source-SRC6 { border-left-color: var(--source-color-6) !important; }
-.vis-item.source-7, .vis-item.source-SRC7 { border-left-color: var(--source-color-7) !important; }
-.vis-item.source-8, .vis-item.source-SRC8 { border-left-color: var(--source-color-8) !important; }
-
-/* Mixed sources in aggregated events */
-.vis-item.source-mixed {
-  border-left-width: 4px !important;
-  border-left-style: dashed !important;
-  border-left-color: var(--source-color-mixed) !important;
 }
 
 /* Source system filter section */

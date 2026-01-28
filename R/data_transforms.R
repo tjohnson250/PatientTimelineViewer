@@ -900,6 +900,9 @@ transform_all_to_timevis <- function(patient_data) {
 
   # Add source info to tooltips and CSS classes
   if (nrow(events) > 0) {
+    # Get unique source codes to assign consistent numbered classes (alphabetically sorted)
+    unique_sources <- sort(unique(events$cdw_source[!is.na(events$cdw_source) & events$cdw_source != ""]))
+
     events <- events %>%
       dplyr::mutate(
         # Add source system to tooltip
@@ -914,10 +917,15 @@ transform_all_to_timevis <- function(patient_data) {
           TRUE ~ title
         ),
         # Add source-based CSS class for visual coding
+        # Includes both source-NAME and source-N (numbered 1-8 for CSS color scheme)
         className = dplyr::case_when(
-          !is.na(cdw_source) & cdw_source != "" ~
+          !is.na(cdw_source) & cdw_source != "" ~ {
+            source_idx <- match(cdw_source, unique_sources)
+            color_num <- ((source_idx - 1) %% 8) + 1
             paste0(className, " source-",
-                   gsub("[^A-Za-z0-9]", "", cdw_source)),
+                   gsub("[^A-Za-z0-9]", "", cdw_source),
+                   " source-", color_num)
+          },
           TRUE ~ className
         )
       )

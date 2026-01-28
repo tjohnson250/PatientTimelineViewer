@@ -44,8 +44,8 @@ timeline_ui <- function() {
           // Preserve window for these filter types:
           // - Event type checkboxes (show_encounters, show_diagnoses, etc.)
           // - Source system checkboxes (show_source_*)
-          // - Clustering and aggregation
-          if (inputName === 'enable_clustering' || inputName === 'aggregation') {
+          // - Clustering, aggregation, and color scheme
+          if (inputName === 'enable_clustering' || inputName === 'aggregation' || inputName === 'color_scheme') {
             return true;
           }
           if (inputName && inputName.startsWith('show_')) {
@@ -344,6 +344,31 @@ timeline_ui <- function() {
               ),
               value = TRUE
             )
+          )
+        ),
+
+        # Color scheme selector
+        fluidRow(
+          style = "margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;",
+          column(6,
+            selectInput(
+              "color_scheme",
+              label = tags$span(
+                "Color By:",
+                tags$i(
+                  class = "fa fa-question-circle help-icon",
+                  `data-toggle` = "tooltip",
+                  `data-placement` = "top",
+                  title = "Choose how timeline events are colored. Event Type colors events by category (encounters, diagnoses, etc.). Source System colors events by their originating EMR system."
+                )
+              ),
+              choices = c("Event Type" = "event_type", "Source System" = "source_system"),
+              selected = "event_type"
+            )
+          ),
+          column(6,
+            # Legend will be rendered here based on color scheme
+            uiOutput("color_legend")
           )
         )
       ),
@@ -645,48 +670,16 @@ timeline_server <- function(input, output, session) {
     "#E74C3C", "#27AE60", "#F39C12", "#1ABC9C"
   )
 
-  # Predefined source-to-color mappings (must match CSS rules in custom.css)
-  # These are the named EMR systems with fixed color assignments
-  predefined_source_colors <- c(
-    "EPIC" = 1,
-    "CERNER" = 2,
-    "MEDITECH" = 3,
-    "ALLSCRIPTS" = 4,
-    "ATHENA" = 5,
-    "NEXTGEN" = 6,
-    "ECLINICALWORKS" = 7,
-    "VERADIGM" = 8
-  )
-
   # Helper function to get color for a source code
-  # Returns the color based on predefined mappings or assigns dynamically
+
+  # Colors are assigned dynamically based on position in the sorted source list
+  # This ensures consistent colors between the legend and timeline bars
   get_source_color <- function(source_code, all_source_codes) {
-    # Clean the source code (same as CSS class generation)
+    # Clean the source code for matching
     clean_code <- gsub("[^A-Za-z0-9]", "", toupper(source_code))
-
-    # Check if it matches a predefined named system
-    if (clean_code %in% names(predefined_source_colors)) {
-      idx <- predefined_source_colors[[clean_code]]
-      return(source_colors[idx])
-    }
-
-    # Check if it's a numeric code (1, 2, etc.) or SRC1, SRC2 pattern
-    if (grepl("^[0-9]+$", clean_code)) {
-      idx <- as.integer(clean_code)
-      if (idx >= 1 && idx <= 8) {
-        return(source_colors[idx])
-      }
-    }
-    if (grepl("^SRC[0-9]+$", clean_code)) {
-      idx <- as.integer(gsub("SRC", "", clean_code))
-      if (idx >= 1 && idx <= 8) {
-        return(source_colors[idx])
-      }
-    }
-
-    # For unknown sources, assign based on position in the source list
-    # This ensures consistent color assignment across legend and timeline
     clean_all <- gsub("[^A-Za-z0-9]", "", toupper(all_source_codes))
+
+    # Find position in the source list (sorted by count descending)
     position <- which(clean_all == clean_code)[1]
     if (!is.na(position)) {
       idx <- ((position - 1) %% length(source_colors)) + 1
@@ -764,39 +757,94 @@ timeline_server <- function(input, output, session) {
     )
   })
 
-  # Inject dynamic CSS for source system colors when patient loads
-  # This ensures sources not in the predefined CSS get proper colors
+  # Observer for color scheme body class
   observe({
+    scheme <- input$color_scheme
+    if (!is.null(scheme)) {
+      shinyjs::runjs(sprintf(
+        "document.body.classList.remove('color-by-event-type', 'color-by-source-system');
+         document.body.classList.add('color-by-%s');",
+        gsub("_", "-", scheme)
+      ))
+    }
+  })
+
+  # Render the appropriate color legend based on color scheme
+  output$color_legend <- renderUI({
     req(rv$patient_data)
+    scheme <- input$color_scheme
 
-    sources <- get_source_systems(rv$patient_data)
-    if (nrow(sources) == 0) return()
+    if (is.null(scheme) || scheme == "event_type") {
+      # Event type legend - show colored squares for each event type
+      event_types <- list(
+        list(name = "Encounters", color = "#d4e4f7", border = "#a8c5e8"),
+        list(name = "Diagnoses", color = "#fadbd8", border = "#f5b7b1"),
+        list(name = "Procedures", color = "#e8daef", border = "#d2b4de"),
+        list(name = "Labs", color = "#d5f4e6", border = "#a9dfbf"),
+        list(name = "Prescribing", color = "#fae5d3", border = "#f5cba7"),
+        list(name = "Dispensing", color = "#fdebd0", border = "#fad7a0"),
+        list(name = "Vitals", color = "#d0ece7", border = "#a2d9ce"),
+        list(name = "Conditions", color = "#f8d7da", border = "#f5c6cb")
+      )
 
-    all_source_codes <- sources$source_code
+      legend_items <- lapply(event_types, function(et) {
+        tags$span(
+          class = "source-legend-item",
+          tags$span(
+            class = "source-legend-color",
+            style = sprintf("background-color: %s; border: 1px solid %s;", et$color, et$border)
+          ),
+          et$name
+        )
+      })
 
-    # Build CSS rules for each source
-    css_rules <- sapply(all_source_codes, function(src_code) {
-      color <- get_source_color(src_code, all_source_codes)
-      # Generate CSS class name same way as data_transforms.R
-      clean_code <- gsub("[^A-Za-z0-9]", "", src_code)
-      sprintf(".vis-item.source-%s { border-left-color: %s !important; }", clean_code, color)
-    })
+      div(
+        class = "source-legend",
+        tags$span(class = "source-legend-title", "Event Types: "),
+        div(class = "source-legend-items", legend_items)
+      )
+    } else {
+      # Source system legend - show colored squares for each source
+      sources <- get_source_systems(rv$patient_data)
+      if (nrow(sources) == 0) return(NULL)
 
-    # Inject CSS via JavaScript
-    css_text <- paste(css_rules, collapse = "\n")
-    js_code <- sprintf("
-      (function() {
-        var styleId = 'dynamic-source-colors';
-        var existing = document.getElementById(styleId);
-        if (existing) existing.remove();
-        var style = document.createElement('style');
-        style.id = styleId;
-        style.textContent = %s;
-        document.head.appendChild(style);
-      })();
-    ", shQuote(css_text))
+      # Source system colors (must match CSS)
+      source_colors <- list(
+        list(bg = "#FFE5D9", border = "#FF6B35"),  # 1: Orange
+        list(bg = "#D4F5F0", border = "#2EC4B6"),  # 2: Teal
+        list(bg = "#E8DAEF", border = "#9B59B6"),  # 3: Purple
+        list(bg = "#D4E4F7", border = "#3498DB"),  # 4: Blue
+        list(bg = "#FADBD8", border = "#E74C3C"),  # 5: Red
+        list(bg = "#D5F4E6", border = "#27AE60"),  # 6: Green
+        list(bg = "#FDEBD0", border = "#F39C12"),  # 7: Amber
+        list(bg = "#D0F0ED", border = "#1ABC9C")   # 8: Mint
+      )
 
-    shinyjs::runjs(js_code)
+      legend_items <- lapply(1:nrow(sources), function(i) {
+        src <- sources[i, ]
+        color_idx <- ((i - 1) %% 8) + 1
+        colors <- source_colors[[color_idx]]
+
+        tags$span(
+          class = "source-legend-item",
+          tags$span(
+            class = "source-legend-color",
+            style = sprintf("background-color: %s; border: 1px solid %s;", colors$bg, colors$border)
+          ),
+          if (!is.na(src$source_description)) {
+            paste0(src$source_description, " (", src$source_code, ")")
+          } else {
+            src$source_code
+          }
+        )
+      })
+
+      div(
+        class = "source-legend",
+        tags$span(class = "source-legend-title", "Source Systems: "),
+        div(class = "source-legend-items", legend_items)
+      )
+    }
   })
 
   # Get selected source systems
@@ -823,7 +871,7 @@ timeline_server <- function(input, output, session) {
     selected
   })
 
-  # Filtered and aggregated events
+  # Filtered and aggregated events with inline styles for coloring
   filtered_events <- reactive({
     req(rv$timeline_events)
 
@@ -846,6 +894,70 @@ timeline_server <- function(input, output, session) {
 
     # Apply aggregation
     events <- aggregate_events(events, input$aggregation)
+
+    # Apply inline styles based on color scheme
+    color_scheme <- input$color_scheme
+    if (is.null(color_scheme)) color_scheme <- "event_type"
+
+    # Define color palettes
+    event_colors <- list(
+      encounter = list(bg = "#d4e4f7", border = "#a8c5e8"),
+      diagnosis = list(bg = "#fadbd8", border = "#f5b7b1"),
+      procedure = list(bg = "#e8daef", border = "#d2b4de"),
+      lab = list(bg = "#d5f4e6", border = "#a9dfbf"),
+      prescribing = list(bg = "#fae5d3", border = "#f5cba7"),
+      dispensing = list(bg = "#fdebd0", border = "#fad7a0"),
+      vital = list(bg = "#d0ece7", border = "#a2d9ce"),
+      condition = list(bg = "#f8d7da", border = "#f5c6cb"),
+      death = list(bg = "#d5d8dc", border = "#85929e")
+    )
+
+    source_colors <- list(
+      list(bg = "#FFE5D9", border = "#FF6B35"),
+      list(bg = "#D4F5F0", border = "#2EC4B6"),
+      list(bg = "#E8DAEF", border = "#9B59B6"),
+      list(bg = "#D4E4F7", border = "#3498DB"),
+      list(bg = "#FADBD8", border = "#E74C3C"),
+      list(bg = "#D5F4E6", border = "#27AE60"),
+      list(bg = "#FDEBD0", border = "#F39C12"),
+      list(bg = "#D0F0ED", border = "#1ABC9C")
+    )
+
+    if (nrow(events) > 0) {
+      if (color_scheme == "source_system") {
+        # Get alphabetically sorted unique sources
+        unique_sources <- sort(unique(events$cdw_source[!is.na(events$cdw_source) & events$cdw_source != ""]))
+
+        events <- events %>%
+          dplyr::rowwise() %>%
+          dplyr::mutate(
+            style = {
+              if (!is.na(cdw_source) && cdw_source != "") {
+                source_idx <- match(cdw_source, unique_sources)
+                color_num <- ((source_idx - 1) %% 8) + 1
+                colors <- source_colors[[color_num]]
+                paste0("background-color: ", colors$bg, "; border-color: ", colors$border, ";")
+              } else {
+                # Fallback for events without source (use gray)
+                "background-color: #e0e0e0; border-color: #bdbdbd;"
+              }
+            }
+          ) %>%
+          dplyr::ungroup()
+      } else {
+        # Event type coloring
+        events <- events %>%
+          dplyr::rowwise() %>%
+          dplyr::mutate(
+            style = {
+              colors <- event_colors[[event_type]]
+              if (is.null(colors)) colors <- list(bg = "#e0e0e0", border = "#bdbdbd")
+              paste0("background-color: ", colors$bg, "; border-color: ", colors$border, ";")
+            }
+          ) %>%
+          dplyr::ungroup()
+      }
+    }
 
     events
   })

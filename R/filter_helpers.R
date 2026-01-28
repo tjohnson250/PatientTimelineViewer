@@ -319,7 +319,7 @@ get_source_systems <- function(patient_data) {
         paste0(source_code, " - ", count, " events")
       )
     ) %>%
-    dplyr::arrange(dplyr::desc(count))
+    dplyr::arrange(source_code)  # Sort alphabetically for consistent color assignment
 
   result
 }

@@ -297,6 +297,45 @@ query_source_descriptions <- function(mpi_conn) {
   execute_query(mpi_conn, sql)
 }
 
+#' Search for patients by PATID prefix
+#'
+#' Searches the DEMOGRAPHIC table for patients whose PATID starts with
+#' the given search term. Returns basic demographic info for display
+#' in autocomplete dropdown (no patient names for security).
+#'
+#' @param conn CDW database connection
+#' @param search_term Search string (prefix match on PATID)
+#' @param limit Maximum number of results to return (default 20)
+#' @return Data frame with PATID, BIRTH_DATE, SEX columns
+#' @export
+search_patients <- function(conn, search_term, limit = 20) {
+  db_type <- get_db_type()
+
+  # Build LIKE pattern for prefix match
+  search_pattern <- paste0(search_term, "%")
+
+  # Build query with LIMIT/TOP depending on database type
+  if (db_type == "mssql") {
+    sql <- paste0(
+      "SELECT TOP ", limit, " PATID, BIRTH_DATE, SEX ",
+      "FROM dbo.DEMOGRAPHIC ",
+      "WHERE PATID LIKE ? ",
+      "ORDER BY PATID"
+    )
+  } else {
+    # DuckDB syntax
+    sql <- paste0(
+      "SELECT PATID, BIRTH_DATE, SEX ",
+      "FROM DEMOGRAPHIC ",
+      "WHERE PATID LIKE ? ",
+      "ORDER BY PATID ",
+      "LIMIT ", limit
+    )
+  }
+
+  execute_query(conn, sql, params = list(search_pattern))
+}
+
 #' Query source system mappings from MPI
 #' @param mpi_conn MPI database connection
 #' @param patid Patient ID (unified PATID = UID in MPI)

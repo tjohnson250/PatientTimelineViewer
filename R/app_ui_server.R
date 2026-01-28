@@ -103,8 +103,85 @@ timeline_ui <- function() {
         $(document).on('keypress', '#patid', function(e) {
           if (e.which == 13) {
             e.preventDefault();
+            // Hide autocomplete dropdown
+            $('#patid-autocomplete').hide();
             $('#load_patient').click();
           }
+        });
+
+        // Debounce timer for autocomplete
+        var patidSearchTimer = null;
+
+        // Handle patient search results from server
+        Shiny.addCustomMessageHandler('patid_search_results', function(results) {
+          var $dropdown = $('#patid-autocomplete');
+          $dropdown.empty();
+
+          if (results && results.length > 0) {
+            results.forEach(function(item) {
+              var $option = $('<div class=\"patid-autocomplete-item\">' +
+                '<span class=\"patid\">' + item.value + '</span>' +
+                '<span class=\"details\">' + (item.details || '') + '</span>' +
+              '</div>');
+
+              // Add hover effect via JavaScript for reliability
+              $option.on('mouseenter', function() {
+                $(this).css('background-color', '#e3f2fd');
+              });
+              $option.on('mouseleave', function() {
+                $(this).css('background-color', '#ffffff');
+              });
+
+              $option.on('click', function() {
+                $('#patid').val(item.value);
+                $dropdown.hide();
+                // Trigger Shiny to recognize the value change and auto-load patient
+                Shiny.setInputValue('patid', item.value, {priority: 'event'});
+                $('#load_patient').click();
+              });
+
+              $dropdown.append($option);
+            });
+            $dropdown.show();
+          } else {
+            $dropdown.hide();
+          }
+        });
+
+        // Handle typing in patid input for autocomplete
+        $(document).on('input', '#patid', function() {
+          var query = $(this).val();
+
+          // Clear previous timer
+          if (patidSearchTimer) {
+            clearTimeout(patidSearchTimer);
+          }
+
+          if (query.length < 2) {
+            $('#patid-autocomplete').hide();
+            return;
+          }
+
+          // Debounce: wait 300ms before searching
+          patidSearchTimer = setTimeout(function() {
+            Shiny.setInputValue('patid_search', query, {priority: 'event'});
+          }, 300);
+        });
+
+        // Hide autocomplete when clicking outside
+        $(document).on('click', function(e) {
+          if (!$(e.target).closest('.patid-autocomplete-wrapper').length) {
+            $('#patid-autocomplete').hide();
+          }
+        });
+
+        // Hide autocomplete when input loses focus (with delay for click handling)
+        $(document).on('blur', '#patid', function() {
+          setTimeout(function() {
+            if (!$('#patid-autocomplete:hover').length) {
+              $('#patid-autocomplete').hide();
+            }
+          }, 200);
         });
       "))
     ),
@@ -115,16 +192,25 @@ timeline_ui <- function() {
       windowTitle = "Patient Timeline Viewer"
     ),
 
-    # Patient ID input section
+    # Patient ID input section with type-ahead search
     div(
       class = "patient-input-panel",
       fluidRow(
         column(8,
-          textInput(
-            "patid",
-            label = NULL,
-            placeholder = "Enter Patient ID (PATID)",
-            width = "100%"
+          div(
+            class = "patid-autocomplete-wrapper",
+            textInput(
+              "patid",
+              label = NULL,
+              placeholder = "Type PATID to search (min 2 chars)...",
+              width = "100%"
+            ),
+            # Autocomplete dropdown container
+            div(
+              id = "patid-autocomplete",
+              class = "patid-autocomplete-dropdown",
+              style = "display: none;"
+            )
           )
         ),
         column(4,
@@ -551,6 +637,55 @@ timeline_server <- function(input, output, session) {
       # If user supplied connections, they're responsible for closing them
     }
   })
+
+  # Handle patient search queries for autocomplete
+  observeEvent(input$patid_search, {
+    req(rv$db_connections)
+
+    search_term <- input$patid_search
+    if (is.null(search_term) || nchar(search_term) < 2) {
+      session$sendCustomMessage("patid_search_results", list())
+      return()
+    }
+
+    tryCatch({
+      # Search for matching patients
+      results <- search_patients(rv$db_connections$cdw, search_term, limit = 25)
+
+      if (nrow(results) > 0) {
+        # Format results for autocomplete dropdown
+        choices <- lapply(1:nrow(results), function(i) {
+          row <- results[i, ]
+          # Format birth date
+          birth_date <- if (!is.na(row$BIRTH_DATE)) {
+            format(as.Date(row$BIRTH_DATE), "%Y-%m-%d")
+          } else {
+            "Unknown DOB"
+          }
+          # Format sex
+          sex <- if (!is.na(row$SEX) && row$SEX != "") {
+            row$SEX
+          } else {
+            "Unknown"
+          }
+
+          list(
+            value = row$PATID,
+            details = paste0("DOB: ", birth_date, " | Sex: ", sex)
+          )
+        })
+
+        # Send choices back to JavaScript
+        session$sendCustomMessage("patid_search_results", choices)
+      } else {
+        # No results
+        session$sendCustomMessage("patid_search_results", list())
+      }
+    }, error = function(e) {
+      message("Patient search error: ", e$message)
+      session$sendCustomMessage("patid_search_results", list())
+    })
+  }, ignoreNULL = TRUE, ignoreInit = TRUE)
 
   # Load patient data when button clicked
   observeEvent(input$load_patient, {

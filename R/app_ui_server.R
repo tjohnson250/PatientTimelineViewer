@@ -227,6 +227,27 @@ timeline_ui <- function() {
           )
         ),
 
+        # Source system checkboxes (below event types)
+        fluidRow(
+          column(12,
+            div(
+              class = "source-filter-section",
+              style = "margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;",
+              div(
+                style = "margin-bottom: 10px;",
+                strong("Source Systems:"),
+                tags$i(
+                  class = "fa fa-question-circle help-icon",
+                  `data-toggle` = "tooltip",
+                  `data-placement` = "top",
+                  title = "Filter events by their originating source system (EMR). Colored left borders on timeline events indicate source."
+                )
+              ),
+              uiOutput("source_system_checkboxes")
+            )
+          )
+        ),
+
         # Date range
         fluidRow(
           column(6,
@@ -345,12 +366,15 @@ timeline_ui <- function() {
               value = TRUE
             )
           )
-        ),
+        )
+      ),
 
-        # Color scheme selector
+      # Color scheme selector (positioned between display options and timeline)
+      div(
+        class = "filter-panel",
+        style = "padding: 10px 15px;",
         fluidRow(
-          style = "margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;",
-          column(6,
+          column(4,
             selectInput(
               "color_scheme",
               label = tags$span(
@@ -366,30 +390,10 @@ timeline_ui <- function() {
               selected = "event_type"
             )
           ),
-          column(6,
+          column(8,
             # Legend will be rendered here based on color scheme
             uiOutput("color_legend")
           )
-        )
-      ),
-
-      # Source system filter section
-      div(
-        class = "filter-panel",
-        div(
-          class = "source-filter-section",
-          div(
-            style = "margin-bottom: 10px;",
-            strong("Source Systems:"),
-            tags$i(
-              class = "fa fa-question-circle help-icon",
-              `data-toggle` = "tooltip",
-              `data-placement` = "top",
-              title = "Filter events by their originating source system (EMR). Colored left borders on timeline events indicate source."
-            )
-          ),
-          uiOutput("source_system_checkboxes"),
-          uiOutput("source_legend")
         )
       ),
 
@@ -720,41 +724,6 @@ timeline_server <- function(input, output, session) {
     })
 
     div(style = "display: flex; flex-wrap: wrap; gap: 10px;", checkboxes)
-  })
-
-  # Render source system legend
-  output$source_legend <- renderUI({
-    req(rv$patient_data)
-
-    sources <- get_source_systems(rv$patient_data)
-
-    if (nrow(sources) == 0) return(NULL)
-
-    all_source_codes <- sources$source_code
-
-    legend_items <- lapply(1:nrow(sources), function(i) {
-      src <- sources[i, ]
-      color <- get_source_color(src$source_code, all_source_codes)
-
-      tags$span(
-        class = "source-legend-item",
-        tags$span(
-          class = "source-legend-color",
-          style = paste0("background-color: ", color, ";")
-        ),
-        if (!is.na(src$source_description)) {
-          paste0(src$source_description, " (", src$source_code, ")")
-        } else {
-          src$source_code
-        }
-      )
-    })
-
-    div(
-      class = "source-legend",
-      tags$span(class = "source-legend-title", "Legend: "),
-      div(class = "source-legend-items", legend_items)
-    )
   })
 
   # Observer for color scheme body class

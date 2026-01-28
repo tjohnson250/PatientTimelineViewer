@@ -250,6 +250,7 @@ timeline_ui <- function() {
 
         # Date range
         fluidRow(
+          style = "margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;",
           column(6,
             dateInput(
               "date_start",

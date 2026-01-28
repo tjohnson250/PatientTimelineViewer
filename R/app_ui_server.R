@@ -1288,6 +1288,38 @@ timeline_server <- function(input, output, session) {
       )
     }
 
+    # Build ICD description row for diagnoses and conditions
+    icd_description_row <- NULL
+    if (event$event_type == "diagnosis" && "DX" %in% names(record) &&
+        !is.na(record$DX[1]) && icd_data_available()) {
+      dx_code <- record$DX[1]
+      dx_type <- if ("DX_TYPE" %in% names(record)) record$DX_TYPE[1] else "10"
+      icd_desc <- lookup_icd_description(dx_code, dx_type)
+
+      if (!is.na(icd_desc) && icd_desc != "") {
+        icd_description_row <- div(
+          class = "detail-row icd-description-row",
+          style = "background-color: #f0f7ff; padding: 8px; margin: 5px 0; border-radius: 4px;",
+          span(class = "detail-key", style = "font-weight: 600;", "ICD Description"),
+          span(class = "detail-value", icd_desc)
+        )
+      }
+    } else if (event$event_type == "condition" && "CONDITION" %in% names(record) &&
+               !is.na(record$CONDITION[1]) && icd_data_available()) {
+      cond_code <- record$CONDITION[1]
+      cond_type <- if ("CONDITION_TYPE" %in% names(record)) record$CONDITION_TYPE[1] else "10"
+      icd_desc <- lookup_icd_description(cond_code, cond_type)
+
+      if (!is.na(icd_desc) && icd_desc != "") {
+        icd_description_row <- div(
+          class = "detail-row icd-description-row",
+          style = "background-color: #f0f7ff; padding: 8px; margin: 5px 0; border-radius: 4px;",
+          span(class = "detail-key", style = "font-weight: 600;", "ICD Description"),
+          span(class = "detail-value", icd_desc)
+        )
+      }
+    }
+
     # Build key-value display (exclude CDW_Source since we show it specially)
     detail_rows <- lapply(names(record), function(col) {
       if (col == "CDW_Source") return(NULL)  # Skip - shown separately
@@ -1304,6 +1336,7 @@ timeline_server <- function(input, output, session) {
     div(
       h5(paste("Source Table:", event$source_table)),
       source_system_row,  # Show source system prominently at top
+      icd_description_row,  # Show ICD description prominently
       div(Filter(Negate(is.null), detail_rows))
     )
   })

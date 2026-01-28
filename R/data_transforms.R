@@ -224,6 +224,17 @@ transform_diagnoses <- function(diagnoses) {
     return(empty_df)
   }
 
+  # Look up ICD descriptions vectorized (before rowwise)
+  # Only do this if icd.data is available
+  if (icd_data_available()) {
+    diagnoses <- diagnoses %>%
+      mutate(
+        icd_description = lookup_icd_descriptions(DX, DX_TYPE)
+      )
+  } else {
+    diagnoses$icd_description <- NA_character_
+  }
+
   diagnoses %>%
     rowwise() %>%
     mutate(
@@ -233,11 +244,21 @@ transform_diagnoses <- function(diagnoses) {
         PDX == "X" ~ "Unable to classify",
         TRUE ~ as.character(PDX)
       ),
-      # Use description if available, otherwise fall back to code
+      # Use RAW_DX if available, then ICD lookup, then fall back to code
       dx_display = if (!is.na(RAW_DX) && RAW_DX != "") {
         as.character(RAW_DX)
+      } else if (!is.na(icd_description) && icd_description != "") {
+        as.character(icd_description)
       } else {
         as.character(DX)
+      },
+      # For tooltip description: prefer ICD lookup, then RAW_DX
+      tooltip_description = if (!is.na(icd_description) && icd_description != "") {
+        as.character(icd_description)
+      } else if (!is.na(RAW_DX) && RAW_DX != "") {
+        as.character(RAW_DX)
+      } else {
+        NA_character_
       },
       id = paste0("DX_", DIAGNOSISID),
       content = dx_display,
@@ -248,7 +269,7 @@ transform_diagnoses <- function(diagnoses) {
       className = "event-diagnosis",
       title = create_tooltip(
         "Diagnosis Code" = DX,
-        "Description" = RAW_DX,
+        "Description" = tooltip_description,
         "Type" = DX_TYPE,
         "PDX" = pdx_desc,
         "Date" = format(parsed_date, "%Y-%m-%d"),
@@ -697,6 +718,17 @@ transform_conditions <- function(conditions) {
     return(empty_df)
   }
 
+  # Look up ICD descriptions vectorized (before rowwise)
+  # CONDITION table uses CONDITION_TYPE for ICD version
+  if (icd_data_available()) {
+    conditions <- conditions %>%
+      mutate(
+        icd_description = lookup_icd_descriptions(CONDITION, CONDITION_TYPE)
+      )
+  } else {
+    conditions$icd_description <- NA_character_
+  }
+
   conditions %>%
     rowwise() %>%
     mutate(
@@ -707,11 +739,21 @@ transform_conditions <- function(conditions) {
         CONDITION_STATUS == "IN" ~ "Inactive",
         TRUE ~ as.character(CONDITION_STATUS)
       ),
-      # Use description if available, otherwise fall back to code
+      # Use RAW_CONDITION if available, then ICD lookup, then fall back to code
       cond_display = if (!is.na(RAW_CONDITION) && RAW_CONDITION != "") {
         as.character(RAW_CONDITION)
+      } else if (!is.na(icd_description) && icd_description != "") {
+        as.character(icd_description)
       } else {
         as.character(CONDITION)
+      },
+      # For tooltip description: prefer ICD lookup, then RAW_CONDITION
+      tooltip_description = if (!is.na(icd_description) && icd_description != "") {
+        as.character(icd_description)
+      } else if (!is.na(RAW_CONDITION) && RAW_CONDITION != "") {
+        as.character(RAW_CONDITION)
+      } else {
+        NA_character_
       },
       id = paste0("COND_", CONDITIONID),
       content = cond_display,
@@ -722,7 +764,7 @@ transform_conditions <- function(conditions) {
       className = "event-condition",
       title = create_tooltip(
         "Condition Code" = CONDITION,
-        "Description" = RAW_CONDITION,
+        "Description" = tooltip_description,
         "Status" = status_desc,
         "Onset Date" = format(parsed_date, "%Y-%m-%d"),
         "Report Date" = if(!is.na(REPORT_DATE)) format(safe_parse_date(REPORT_DATE), "%Y-%m-%d") else NA_character_,

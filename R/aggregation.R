@@ -159,7 +159,21 @@ aggregate_events <- function(events, level = "daily") {
         if (count[i] == 1) {
           contents[[i]][1]
         } else {
-          paste0(count[i], " ", gsub("s$", "", group[i]))
+          # Proper pluralization for marker label
+          group_name <- tools::toTitleCase(gsub("_", " ", group[i]))
+          # Handle words ending in -sis (diagnosis -> diagnoses)
+          if (grepl("ses$", group_name)) {
+            # Already plural (e.g., "diagnoses")
+            plural_name <- group_name
+          } else if (grepl("sis$", group_name)) {
+            plural_name <- gsub("sis$", "ses", group_name)
+          } else if (grepl("s$", group_name)) {
+            # Already ends in s, assume plural
+            plural_name <- group_name
+          } else {
+            plural_name <- paste0(group_name, "s")
+          }
+          paste0(count[i], " ", plural_name)
         }
       }),
       end = NA_character_,
@@ -169,8 +183,15 @@ aggregate_events <- function(events, level = "daily") {
           titles[[i]][1]
         } else {
           # Build aggregated tooltip
-          header <- paste0("<b>", count[i], " ", tools::toTitleCase(gsub("_", " ", event_type[i])),
-                          "s on ", start[i], "</b><br>")
+          # Proper pluralization: diagnosis -> diagnoses, others just add "s"
+          type_name <- tools::toTitleCase(gsub("_", " ", event_type[i]))
+          type_plural <- if (grepl("sis$", type_name)) {
+            gsub("sis$", "ses", type_name)  # diagnosis -> diagnoses
+          } else {
+            paste0(type_name, "s")
+          }
+          header <- paste0("<b>", count[i], " ", type_plural,
+                          " on ", start[i], "</b><br>")
           items <- unlist(contents[i])
           # Limit to first 10 items
           if (length(items) > 10) {

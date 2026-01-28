@@ -671,7 +671,7 @@ timeline_server <- function(input, output, session) {
 
           list(
             value = row$PATID,
-            details = paste0("DOB: ", birth_date, " | Sex: ", sex)
+            details = paste0(" - DOB: ", birth_date, " | Sex: ", sex)
           )
         })
 

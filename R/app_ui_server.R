@@ -925,8 +925,9 @@ timeline_server <- function(input, output, session) {
 
     if (nrow(events) > 0) {
       if (color_scheme == "source_system") {
-        # Get alphabetically sorted unique sources
-        unique_sources <- sort(unique(events$cdw_source[!is.na(events$cdw_source) & events$cdw_source != ""]))
+        # Get alphabetically sorted unique sources from ALL events (not filtered)
+        # This ensures colors stay consistent even when sources are filtered out
+        unique_sources <- sort(unique(rv$timeline_events$cdw_source[!is.na(rv$timeline_events$cdw_source) & rv$timeline_events$cdw_source != ""]))
 
         events <- events %>%
           dplyr::rowwise() %>%

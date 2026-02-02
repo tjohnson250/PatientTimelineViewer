@@ -1,0 +1,383 @@
+---
+title: "TTE Test: Metformin Initiation in Diabetic Patients (DuckDB Sample Data)"
+format: html
+editor: visual
+---
+
+# Test: Configurable Censoring with Sample Data
+
+This tests the TTE pipeline's configurable censoring feature using the PatientTimelineViewer sample DuckDB data.
+
+**Study Design:** - **Eligibility**: Patients with Type 2 diabetes (E11) and at least 1 prior encounter - **Treatment**: First Metformin prescription - **Outcome**: First heart failure diagnosis (I50) - **Censoring**: Death (testing the new custom censoring feature)
+
+## Setup
+
+```{r}
+library(tidyverse)
+library(DBI)
+library(duckdb)
+
+# Connect to sample DuckDB
+db_path <- system.file("extdata", "pcornet_cdw.duckdb", package = "PatientTimelineViewer")
+if (db_path == "") {
+  db_path <- "/Users/toddjohnson/Documents/GitHub/PatientTimelineViewer/inst/extdata/pcornet_cdw.duckdb"
+}
+con <- dbConnect(duckdb(), db_path, read_only = TRUE)
+
+# Study parameters
+study_start <- "2020-01-01"
+study_end <- "2023-12-31"
+max_followup_periods <- 12  # months
+```
+
+## Step 1: Create Trial Periods (Monthly)
+
+```{r}
+# Generate monthly trial periods
+start_date <- as.Date(study_start)
+end_date <- as.Date(study_end)
+n_months <- as.integer(difftime(end_date, start_date, units = "days") / 30.44)
+
+trial_periods <- tibble(
+  trial_id = 0:(n_months - 1),
+  enrollment_start = seq(start_date, by = "month", length.out = n_months),
+  enrollment_end = seq(start_date, by = "month", length.out = n_months) + months(1)
+)
+
+# Upload to DuckDB as temp table
+dbWriteTable(con, "TrialPeriods", trial_periods, temporary = TRUE, overwrite = TRUE)
+print(paste("Created", nrow(trial_periods), "trial periods"))
+head(trial_periods)
+```
+
+## Step 2: Identify Treatment Events (First Metformin)
+
+```{r}
+treatment_sql <- sprintf("
+SELECT PATID, MIN(RX_ORDER_DATE) AS treatment_date
+FROM PRESCRIBING
+WHERE UPPER(RAW_RX_MED_NAME) LIKE '%%METFORMIN%%'
+  AND RX_ORDER_DATE <= '%s'
+GROUP BY PATID
+", study_end)
+
+treatment_events <- dbGetQuery(con, treatment_sql)
+dbWriteTable(con, "TreatmentEvents", treatment_events, temporary = TRUE, overwrite = TRUE)
+
+print(paste("Patients with Metformin:", nrow(treatment_events)))
+print(treatment_events)
+```
+
+## Step 3: Create Patient Events (Encounters during study period)
+
+```{r}
+events_sql <- sprintf("
+SELECT
+    D.PATID AS UID,
+    D.PATID,
+    E.ENCOUNTERID,
+    E.ADMIT_DATE AS event_date,
+    'ENCOUNTER' AS event_type,
+    E.ENC_TYPE
+FROM DEMOGRAPHIC AS D
+INNER JOIN ENCOUNTER AS E ON E.PATID = D.PATID
+WHERE E.ADMIT_DATE BETWEEN '%s' AND '%s'
+", study_start, study_end)
+
+patient_events <- dbGetQuery(con, events_sql)
+dbWriteTable(con, "PatientEvents", patient_events, temporary = TRUE, overwrite = TRUE)
+
+print(paste("Total events:", nrow(patient_events)))
+print(paste("Unique patients with events:", n_distinct(patient_events$PATID)))
+```
+
+## Step 4: Add Treatment Status and Prior Encounter Count
+
+```{r}
+events_with_status_sql <- "
+SELECT
+    PE.*,
+    (SELECT COUNT(*) FROM PatientEvents PE2
+     WHERE PE2.UID = PE.UID AND PE2.event_date < PE.event_date) AS prior_encounter_count,
+    TE.treatment_date AS FirstTreatmentDT,
+    CASE
+        WHEN TE.treatment_date IS NOT NULL AND TE.treatment_date < PE.event_date
+        THEN 1 ELSE 0
+    END AS has_prior_treatment
+FROM PatientEvents AS PE
+LEFT JOIN TreatmentEvents AS TE ON TE.PATID = PE.PATID
+"
+
+events_with_status <- dbGetQuery(con, events_with_status_sql)
+dbWriteTable(con, "EventsWithStatus", events_with_status, temporary = TRUE, overwrite = TRUE)
+
+print("Treatment status distribution:")
+events_with_status %>%
+  group_by(has_prior_treatment) %>%
+  summarise(n_events = n(), n_patients = n_distinct(UID))
+```
+
+## Step 5: Filter to Eligible Time Zeros (Diabetic patients with prior encounters)
+
+```{r}
+# Eligibility: Has diabetes diagnosis AND at least 1 prior encounter AND no prior treatment
+eligible_sql <- sprintf("
+SELECT EWS.*,
+    CASE WHEN EWS.FirstTreatmentDT = EWS.event_date THEN 1 ELSE 0 END AS treatment_today
+FROM EventsWithStatus AS EWS
+WHERE EWS.event_date >= '%s'
+  AND EWS.prior_encounter_count >= 1
+  AND EWS.has_prior_treatment = 0
+  AND EXISTS (
+    SELECT 1 FROM DIAGNOSIS AS DX
+    WHERE DX.PATID = EWS.PATID
+      AND DX.DX LIKE 'E11%%'
+      AND DX.DX_DATE < EWS.event_date
+  )
+", study_start)
+
+eligible_time_zeros <- dbGetQuery(con, eligible_sql)
+dbWriteTable(con, "EligibleTimeZeros", eligible_time_zeros, temporary = TRUE, overwrite = TRUE)
+
+print(paste("Eligible time zeros:", nrow(eligible_time_zeros)))
+print("By treatment status:")
+eligible_time_zeros %>%
+  group_by(treatment_today) %>%
+  summarise(n = n(), n_patients = n_distinct(UID))
+```
+
+## Step 6: Assign to Trial Periods
+
+```{r}
+assignment_sql <- "
+SELECT
+    ETZ.UID, ETZ.PATID, ETZ.event_date AS time_zero,
+    ETZ.treatment_today AS treatment,
+    TP.trial_id, TP.enrollment_start, TP.enrollment_end,
+    ETZ.FirstTreatmentDT
+FROM EligibleTimeZeros AS ETZ
+INNER JOIN TrialPeriods AS TP
+    ON ETZ.event_date >= TP.enrollment_start
+    AND ETZ.event_date < TP.enrollment_end
+"
+
+trial_assignments <- dbGetQuery(con, assignment_sql)
+dbWriteTable(con, "TrialAssignments", trial_assignments, temporary = TRUE, overwrite = TRUE)
+
+print(paste("Trial assignments:", nrow(trial_assignments)))
+trial_assignments %>%
+  group_by(treatment) %>%
+  summarise(n = n(), n_patients = n_distinct(UID))
+```
+
+## Step 7: Filter to One Assignment per Patient-Trial (keep treatment if both)
+
+```{r}
+filtered_sql <- "
+WITH RankedAssignments AS (
+    SELECT *,
+        ROW_NUMBER() OVER (
+            PARTITION BY UID, trial_id
+            ORDER BY treatment DESC, time_zero
+        ) AS row_priority
+    FROM TrialAssignments
+)
+SELECT UID, PATID, time_zero, treatment, trial_id,
+       enrollment_start, enrollment_end, FirstTreatmentDT
+FROM RankedAssignments
+WHERE row_priority = 1
+"
+
+filtered_assignments <- dbGetQuery(con, filtered_sql)
+
+# Remove trials after first treatment
+final_sql <- "
+WITH FirstTreatmentTrial AS (
+    SELECT UID, MIN(CASE WHEN treatment = 1 THEN trial_id END) AS first_treatment_trial_id
+    FROM (%s) AS FA
+    GROUP BY UID
+)
+SELECT FA.*
+FROM (%s) AS FA
+LEFT JOIN FirstTreatmentTrial AS FTT ON FTT.UID = FA.UID
+WHERE FTT.first_treatment_trial_id IS NULL
+   OR FA.trial_id <= FTT.first_treatment_trial_id
+"
+
+final_assignments <- dbGetQuery(con, sprintf(final_sql, filtered_sql, filtered_sql))
+dbWriteTable(con, "FinalTrialAssignments", final_assignments, temporary = TRUE, overwrite = TRUE)
+
+print(paste("Final assignments:", nrow(final_assignments)))
+final_assignments %>%
+  group_by(treatment) %>%
+  summarise(n = n(), n_patients = n_distinct(UID))
+```
+
+## Step 8: Identify Outcomes (Heart Failure - I50)
+
+```{r}
+outcome_sql <- sprintf("
+SELECT FTA.UID, FTA.trial_id, FTA.time_zero, MIN(DX.DX_DATE) AS outcome_date
+FROM FinalTrialAssignments AS FTA
+INNER JOIN DIAGNOSIS AS DX ON DX.PATID = FTA.PATID
+WHERE DX.DX_DATE > FTA.time_zero
+  AND DX.DX_DATE <= '%s'
+  AND DX.DX LIKE 'I50%%'
+GROUP BY FTA.UID, FTA.trial_id, FTA.time_zero
+", study_end)
+
+outcomes <- dbGetQuery(con, outcome_sql)
+dbWriteTable(con, "Outcomes", outcomes, temporary = TRUE, overwrite = TRUE)
+
+print(paste("Patients with outcome:", nrow(outcomes)))
+if (nrow(outcomes) > 0) print(outcomes)
+```
+
+## Step 9: Last Visit for Censoring
+
+```{r}
+last_visit_sql <- "
+SELECT PATID AS UID, MAX(ADMIT_DATE) AS last_visit_date
+FROM ENCOUNTER
+GROUP BY PATID
+"
+
+last_visit <- dbGetQuery(con, last_visit_sql)
+dbWriteTable(con, "LastVisit", last_visit, temporary = TRUE, overwrite = TRUE)
+print(paste("Patients with last visit:", nrow(last_visit)))
+```
+
+## Step 10b: Custom Censoring Events (DEATH - Testing New Feature!)
+
+**This is the key test of the configurable censoring feature**
+
+```{r}
+# Custom censoring query - deaths within study period
+censoring_sql <- sprintf("
+SELECT PATID AS UID, DEATH_DATE AS censor_date, 'death' AS censor_reason
+FROM DEATH
+WHERE DEATH_DATE <= '%s'
+  AND DEATH_DATE IS NOT NULL
+", study_end)
+
+censoring_events <- dbGetQuery(con, censoring_sql)
+dbWriteTable(con, "CensoringEvents", censoring_events, temporary = TRUE, overwrite = TRUE)
+
+print("=== CUSTOM CENSORING EVENTS (DEATH) ===")
+print(paste("Patients with death censoring:", nrow(censoring_events)))
+if (nrow(censoring_events) > 0) {
+  print(censoring_events)
+}
+```
+
+## Step 11: Create Base Dataset with Custom Censoring
+
+```{r}
+base_dataset_sql <- sprintf("
+SELECT
+    FTA.UID, FTA.PATID, FTA.trial_id,
+    FTA.enrollment_start AS trial_start_date,
+    FTA.enrollment_end AS trial_end_date,
+    FTA.time_zero,
+    FTA.treatment,
+    FTA.FirstTreatmentDT,
+
+    -- Outcome date
+    CASE
+        WHEN O.outcome_date IS NOT NULL AND O.outcome_date > FTA.time_zero
+        THEN O.outcome_date ELSE NULL
+    END AS outcome_date,
+
+    -- Custom censoring date (DEATH)
+    CASE
+        WHEN CE.censor_date IS NOT NULL AND CE.censor_date > FTA.time_zero
+        THEN CE.censor_date ELSE NULL
+    END AS custom_censor_date,
+
+    -- Outcome indicator
+    CASE
+        WHEN O.outcome_date IS NOT NULL AND O.outcome_date > FTA.time_zero
+        THEN 1 ELSE 0
+    END AS outcome,
+
+    -- Censoring reason (priority cascade)
+    CASE
+        WHEN O.outcome_date IS NOT NULL AND O.outcome_date > FTA.time_zero
+        THEN 'outcome'
+        WHEN CE.censor_date IS NOT NULL AND CE.censor_date > FTA.time_zero
+        THEN CE.censor_reason  -- 'death' from custom censoring
+        WHEN LV.last_visit_date < '%s'
+        THEN 'last_visit'
+        ELSE 'administrative'
+    END AS censor_reason,
+
+    LV.last_visit_date
+
+FROM FinalTrialAssignments AS FTA
+LEFT JOIN Outcomes AS O
+    ON O.UID = FTA.UID AND O.trial_id = FTA.trial_id
+LEFT JOIN LastVisit AS LV
+    ON LV.UID = FTA.UID
+LEFT JOIN CensoringEvents AS CE
+    ON CE.UID = FTA.UID
+", study_end)
+
+base_dataset <- dbGetQuery(con, base_dataset_sql)
+
+print("=== BASE DATASET WITH CUSTOM CENSORING ===")
+print(paste("Total rows:", nrow(base_dataset)))
+
+print("\n=== CENSORING REASON BREAKDOWN ===")
+censor_breakdown <- base_dataset %>%
+  group_by(censor_reason) %>%
+  summarise(
+    n_observations = n(),
+    n_patients = n_distinct(UID)
+  ) %>%
+  arrange(desc(n_observations))
+print(censor_breakdown)
+
+# Show death-censored patients specifically
+death_censored <- base_dataset %>% filter(censor_reason == "death")
+if (nrow(death_censored) > 0) {
+  print("\n=== DEATH-CENSORED OBSERVATIONS (Custom Censoring Working!) ===")
+  print(death_censored %>% select(UID, trial_id, time_zero, custom_censor_date, censor_reason))
+}
+```
+
+## Summary: Censoring Feature Test Results
+
+```{r}
+cat("\n========================================\n")
+cat("CENSORING FEATURE TEST SUMMARY\n")
+cat("========================================\n\n")
+
+cat("Study Design:\n")
+cat("- Treatment: Metformin initiation\n")
+cat("- Outcome: Heart failure (I50)\n")
+cat("- Custom Censoring: Death\n\n")
+
+cat("Results:\n")
+cat(sprintf("- Total trial assignments: %d\n", nrow(base_dataset)))
+cat(sprintf("- Unique patients: %d\n", n_distinct(base_dataset$UID)))
+cat(sprintf("- Deaths in sample data: %d\n", nrow(censoring_events)))
+cat(sprintf("- Death-censored observations: %d\n", sum(base_dataset$censor_reason == "death")))
+
+if (sum(base_dataset$censor_reason == "death") > 0) {
+  cat("\n✓ CUSTOM CENSORING FEATURE IS WORKING!\n")
+  cat("  Death records are correctly being used to censor patients.\n")
+} else if (nrow(censoring_events) == 0) {
+  cat("\n⚠ No deaths in the eligible patient subset.\n")
+  cat("  (This is expected if deceased patients weren't in the diabetic cohort)\n")
+} else {
+  cat("\n⚠ Deaths exist but no observations were censored.\n")
+  cat("  (Deaths may have occurred before patient's time_zero)\n")
+}
+```
+
+## Cleanup
+
+```{r}
+dbDisconnect(con)
+cat("\nDatabase connection closed.\n")
+```

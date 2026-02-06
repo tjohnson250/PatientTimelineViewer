@@ -17,8 +17,8 @@ default:
   # DuckDB configuration (used when db_type = "duckdb")
   duckdb:
     # Path to DuckDB database file (use ":memory:" for in-memory)
-    cdw_path: "inst/extdata/pcornet_cdw.duckdb"
-    mpi_path: "inst/extdata/mpi.duckdb"
+    cdw_path: "./data/pcornet_cdw.duckdb"
+    mpi_path: "./data/mpi.duckdb"
 
 # Example configuration for local DuckDB development
 local:

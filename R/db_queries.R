@@ -670,12 +670,14 @@ query_death_cause <- function(conn, patid) {
 #' Load all clinical data for a patient from the PCORnet CDM database.
 #' Returns data from DEMOGRAPHIC, ENCOUNTER, DIAGNOSIS, PROCEDURES,
 #' LAB_RESULT_CM, PRESCRIBING, DISPENSING, VITAL, CONDITION, DEATH,
-#' and DEATH_CAUSE tables.
+#' and DEATH_CAUSE tables. Supports cancellation via callback function.
 #'
 #' @param conns Database connections list from \code{\link{get_db_connections}}
 #' @param patid Patient ID (PATID from the CDM)
+#' @param cancel_check Optional function that returns TRUE if loading should be cancelled.
+#'   Checked between each query to allow early termination. If cancelled, returns NULL.
 #'
-#' @return Named list of data frames:
+#' @return Named list of data frames, or NULL if cancelled:
 #'   \describe{
 #'     \item{demographic}{Patient demographics}
 #'     \item{source_systems}{Source system mappings from MPI}
@@ -699,27 +701,98 @@ query_death_cause <- function(conn, patid) {
 #' }
 #'
 #' @export
-load_patient_data <- function(conns, patid) {
+load_patient_data <- function(conns, patid, cancel_check = NULL, progress_callback = NULL) {
+  # Helper function to check if operation should be cancelled
+  should_cancel <- function() {
+    if (!is.null(cancel_check) && is.function(cancel_check)) {
+      return(cancel_check())
+    }
+    return(FALSE)
+  }
+
+  # Helper function to report progress
+  report_progress <- function(step_num, step_name) {
+    if (!is.null(progress_callback) && is.function(progress_callback)) {
+      progress_callback(step_num, 13, step_name)
+    }
+  }
+
+  # Load demographic data first
+  report_progress(1, "Demographics")
+  demographic <- query_demographic(conns$cdw, patid)
+  if (should_cancel()) return(NULL)
+
+  # Load source systems (with error handling)
+  report_progress(2, "Source Systems")
+  source_systems <- tryCatch(
+    query_source_systems(conns$mpi, patid),
+    error = function(e) data.frame()
+  )
+  if (should_cancel()) return(NULL)
+
+  report_progress(3, "Source Descriptions")
+  source_descriptions <- tryCatch(
+    query_source_descriptions(conns$mpi),
+    error = function(e) data.frame(SRC = character(), SourceDescription = character())
+  )
+  if (should_cancel()) return(NULL)
+
+  # Load clinical data
+  report_progress(4, "Encounters")
+  encounters <- query_encounters(conns$cdw, patid)
+  if (should_cancel()) return(NULL)
+
+  report_progress(5, "Diagnoses")
+  diagnoses <- query_diagnoses(conns$cdw, patid)
+  if (should_cancel()) return(NULL)
+
+  report_progress(6, "Procedures")
+  procedures <- query_procedures(conns$cdw, patid)
+  if (should_cancel()) return(NULL)
+
+  report_progress(7, "Lab Results")
+  labs <- query_labs(conns$cdw, patid)
+  if (should_cancel()) return(NULL)
+
+  report_progress(8, "Prescriptions")
+  prescribing <- query_prescribing(conns$cdw, patid)
+  if (should_cancel()) return(NULL)
+
+  report_progress(9, "Dispensing Records")
+  dispensing <- query_dispensing(conns$cdw, patid)
+  if (should_cancel()) return(NULL)
+
+  report_progress(10, "Vital Signs")
+  vitals <- query_vitals(conns$cdw, patid)
+  if (should_cancel()) return(NULL)
+
+  report_progress(11, "Conditions")
+  conditions <- query_conditions(conns$cdw, patid)
+  if (should_cancel()) return(NULL)
+
+  report_progress(12, "Death Records")
+  death <- query_death(conns$cdw, patid)
+  if (should_cancel()) return(NULL)
+
+  report_progress(13, "Death Causes")
+  death_cause <- query_death_cause(conns$cdw, patid)
+  if (should_cancel()) return(NULL)
+
+  # Return complete dataset
   list(
-    demographic = query_demographic(conns$cdw, patid),
-    source_systems = tryCatch(
-      query_source_systems(conns$mpi, patid),
-      error = function(e) data.frame()
-    ),
-    source_descriptions = tryCatch(
-      query_source_descriptions(conns$mpi),
-      error = function(e) data.frame(SRC = character(), SourceDescription = character())
-    ),
-    encounters = query_encounters(conns$cdw, patid),
-    diagnoses = query_diagnoses(conns$cdw, patid),
-    procedures = query_procedures(conns$cdw, patid),
-    labs = query_labs(conns$cdw, patid),
-    prescribing = query_prescribing(conns$cdw, patid),
-    dispensing = query_dispensing(conns$cdw, patid),
-    vitals = query_vitals(conns$cdw, patid),
-    conditions = query_conditions(conns$cdw, patid),
-    death = query_death(conns$cdw, patid),
-    death_cause = query_death_cause(conns$cdw, patid)
+    demographic = demographic,
+    source_systems = source_systems,
+    source_descriptions = source_descriptions,
+    encounters = encounters,
+    diagnoses = diagnoses,
+    procedures = procedures,
+    labs = labs,
+    prescribing = prescribing,
+    dispensing = dispensing,
+    vitals = vitals,
+    conditions = conditions,
+    death = death,
+    death_cause = death_cause
   )
 }
 

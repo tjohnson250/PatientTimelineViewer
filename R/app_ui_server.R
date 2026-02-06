@@ -579,8 +579,54 @@ timeline_server <- function(input, output, session) {
     semantic_filter_active = FALSE,
     semantic_filter_sql = NULL,
     semantic_filter_table = NULL,
-    semantic_filter_results = NULL
+    semantic_filter_results = NULL,
+    cancel_load = FALSE,
+    loading_in_progress = FALSE,
+    load_progress_step = 0,
+    load_progress_total = 13,
+    load_progress_name = ""
   )
+
+  # Observer to update progress bar in modal
+  observeEvent(list(rv$load_progress_step, rv$load_progress_name), {
+    if (rv$loading_in_progress) {
+      step <- isolate(rv$load_progress_step)
+      total <- isolate(rv$load_progress_total)
+      name <- isolate(rv$load_progress_name)
+
+      # Calculate percentage (0-100)
+      percentage <- round((step / total) * 100)
+
+      # Update progress bar width
+      shinyjs::runjs(sprintf(
+        "document.getElementById('loading-progress-bar').style.width = '%d%%';",
+        percentage
+      ))
+
+      # Update percentage text
+      shinyjs::runjs(sprintf(
+        "document.getElementById('progress-percentage').textContent = '%d%%';",
+        percentage
+      ))
+
+      # Update step counter
+      shinyjs::runjs(sprintf(
+        "document.getElementById('current-step').textContent = '%d';",
+        step
+      ))
+
+      # Update table name
+      table_text <- if (name != "") {
+        paste0("Currently loading: ", name)
+      } else {
+        "Initializing..."
+      }
+      shinyjs::runjs(sprintf(
+        "document.getElementById('progress-table-name').textContent = %s;",
+        jsonlite::toJSON(table_text, auto_unbox = TRUE)
+      ))
+    }
+  }, ignoreNULL = FALSE, ignoreInit = TRUE)
 
   # Stop app when browser session ends (makes closing browser tab stop the app)
   session$onSessionEnded(stopApp)
@@ -687,6 +733,13 @@ timeline_server <- function(input, output, session) {
     })
   }, ignoreNULL = TRUE, ignoreInit = TRUE)
 
+  # Handle cancel button in loading modal
+  observeEvent(input$cancel_load_btn, {
+    rv$cancel_load <- TRUE
+    removeModal()
+    showNotification("Loading cancelled", type = "warning", duration = 3)
+  })
+
   # Load patient data when button clicked
   observeEvent(input$load_patient, {
     req(input$patid)
@@ -698,23 +751,101 @@ timeline_server <- function(input, output, session) {
       return()
     }
 
-    # Show loading notification
-    showNotification("Loading patient data...", id = "loading", duration = NULL)
+    # Reset cancellation flag and set loading flag
+    rv$cancel_load <- FALSE
+    rv$loading_in_progress <- TRUE
+
+    # Reset progress tracking
+    rv$load_progress_step <- 0
+    rv$load_progress_total <- 13
+    rv$load_progress_name <- ""
+
+    # Show loading modal with progress bar and cancel button
+    showModal(modalDialog(
+      title = NULL,
+      div(
+        style = "text-align: center; padding: 20px;",
+        # Header
+        div(
+          style = "font-size: 18px; margin-bottom: 20px; font-weight: 600;",
+          "Loading patient data..."
+        ),
+        # Progress bar container
+        div(
+          class = "loading-progress-container",
+          style = "background-color: #e9ecef; border-radius: 4px; overflow: hidden; margin-bottom: 15px;",
+          div(
+            id = "loading-progress-bar",
+            class = "loading-progress-bar",
+            style = "height: 30px; background-color: #3498db; width: 0%; transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;",
+            span(id = "progress-percentage", "0%")
+          )
+        ),
+        # Step counter
+        div(
+          id = "progress-step-info",
+          style = "font-size: 14px; color: #6c757d; margin-bottom: 10px;",
+          "Step ", span(id = "current-step", "0"), " of ", span(id = "total-steps", "13")
+        ),
+        # Current table name
+        div(
+          id = "progress-table-name",
+          style = "font-size: 15px; color: #2c3e50; margin-bottom: 20px; min-height: 24px;",
+          "Initializing..."
+        ),
+        # Cancel button
+        actionButton(
+          "cancel_load_btn",
+          "Cancel",
+          icon = icon("times"),
+          class = "btn-warning"
+        )
+      ),
+      footer = NULL,
+      size = "s",
+      easyClose = FALSE
+    ))
 
     tryCatch({
-      # Load all patient data
-      rv$patient_data <- load_patient_data(rv$db_connections, patid)
+      # Load all patient data with cancellation support and progress tracking
+      patient_data_result <- load_patient_data(
+        rv$db_connections,
+        patid,
+        cancel_check = function() isolate(rv$cancel_load),
+        progress_callback = function(step, total, step_name) {
+          rv$load_progress_step <- step
+          rv$load_progress_total <- total
+          rv$load_progress_name <- step_name
+        }
+      )
+
+      # Check if loading was cancelled
+      if (is.null(patient_data_result) || rv$cancel_load) {
+        rv$loading_in_progress <- FALSE
+        removeModal()
+        return()
+      }
 
       # Check if patient exists
-      if (nrow(rv$patient_data$demographic) == 0) {
-        removeNotification("loading")
+      if (nrow(patient_data_result$demographic) == 0) {
+        rv$loading_in_progress <- FALSE
+        removeModal()
         showNotification(
           paste("No patient found with ID:", patid),
           type = "warning"
         )
-        rv$patient_data <- NULL
         return()
       }
+
+      # Check again for cancellation before processing
+      if (rv$cancel_load) {
+        rv$loading_in_progress <- FALSE
+        removeModal()
+        return()
+      }
+
+      # Store the loaded data
+      rv$patient_data <- patient_data_result
 
       # Get date range
       rv$date_range <- get_date_range(rv$patient_data)
@@ -737,14 +868,16 @@ timeline_server <- function(input, output, session) {
       # Clear selected event
       rv$selected_event <- NULL
 
-      removeNotification("loading")
+      rv$loading_in_progress <- FALSE
+      removeModal()
       showNotification(
         paste("Loaded", get_total_event_count(rv$patient_data), "events"),
         type = "message"
       )
 
     }, error = function(e) {
-      removeNotification("loading")
+      rv$loading_in_progress <- FALSE
+      removeModal()
       showNotification(
         paste("Error loading patient:", e$message),
         type = "error",

@@ -17,3 +17,6 @@ src/*.dll
 
 # Local development data (sample data is in inst/extdata/)
 data/
+
+# VisionPro app lives on its own branch (claude/vision-pro-3d-conversion-qBwYu)
+VisionProApp/

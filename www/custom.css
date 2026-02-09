@@ -918,6 +918,41 @@ body {
    Loading Progress Bar
    ============================================ */
 
+/* ============================================
+   Timeline Overview / Minimap
+   ============================================ */
+
+#timeline-overview-container {
+  height: 96px;
+  background: #f8f9fa;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  margin-top: 4px;
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+}
+
+#overview-svg {
+  display: block;
+}
+
+.overview-viewport {
+  transition: fill 0.15s ease;
+}
+
+.overview-viewport:hover {
+  fill: rgba(52, 152, 219, 0.15);
+}
+
+.overview-handle {
+  transition: opacity 0.15s ease;
+}
+
+.overview-handle:hover {
+  opacity: 0.9 !important;
+}
+
 /* Progress bar for loading modal - enhanced styling */
 .loading-progress-bar {
   background: linear-gradient(90deg, #3498db 0%, #2980b9 100%) !important;

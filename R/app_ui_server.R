@@ -19,6 +19,7 @@ timeline_ui <- function() {
       tags$script(src = "cluster-colors.js"),
       tags$script(src = "timeline-markers.js"),
       tags$script(src = "timeline-resizer.js"),
+      tags$script(src = "timeline-overview.js"),
       tags$style(HTML("
         .shiny-notification {
           position: fixed;
@@ -516,6 +517,10 @@ timeline_ui <- function() {
             class = "timeline-resize-handle",
             title = "Drag to resize timeline"
           )
+        ),
+        # Overview minimap
+        div(
+          id = "timeline-overview-container"
         )
       ),
 

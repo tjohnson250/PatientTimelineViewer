@@ -1122,6 +1122,7 @@ timeline_server <- function(input, output, session) {
       px_pattern = input$px_pattern,
       lab_name = input$lab_name,
       med_name = input$med_name,
+      enc_types = input$enc_type_filter,
       semantic_results = if (rv$semantic_filter_active) rv$semantic_filter_results else NULL,
       semantic_table = if (rv$semantic_filter_active) rv$semantic_filter_table else NULL,
       source_systems = get_selected_source_systems()

@@ -54,40 +54,53 @@ filter_by_date_range <- function(events, start_date, end_date) {
 #' @param enc_types Character vector of encounter types to include
 #' @return Filtered data frame
 filter_by_encounter_type <- function(events, patient_data, enc_types) {
-  if (is.null(enc_types) || length(enc_types) == 0 || 
-      "ALL" %in% enc_types || length(enc_types) == 0) {
+  if (is.null(enc_types) || length(enc_types) == 0 ||
+      "ALL" %in% enc_types) {
     return(events)
   }
-  
-  # Get encounter IDs matching the selected types
+
+ # Get encounter IDs matching the selected types
   valid_enc_ids <- patient_data$encounters %>%
     filter(ENC_TYPE %in% enc_types) %>%
     pull(ENCOUNTERID)
-  
-  # Filter encounters directly
-  enc_events <- events %>%
-    filter(event_type == "encounter") %>%
-    filter(source_key %in% valid_enc_ids)
-  
-  # For linked events (diagnoses, procedures, labs), filter by encounter
-  linked_enc_ids <- c(
-    patient_data$diagnoses$ENCOUNTERID,
-    patient_data$procedures$ENCOUNTERID,
-    patient_data$labs$ENCOUNTERID,
-    patient_data$vitals$ENCOUNTERID
-  )
-  
-  # Keep events that are either encounters matching type,
 
-  # or events linked to those encounters,
-  # or events that don't have encounter linkage (prescribing, dispensing, conditions)
-  # Always keep birth and death markers
+  # Build lookup of source_key to ENCOUNTERID for linked event types
+  # Diagnoses
+  dx_enc_lookup <- patient_data$diagnoses %>%
+    select(DIAGNOSISID, ENCOUNTERID) %>%
+    filter(ENCOUNTERID %in% valid_enc_ids)
+  valid_dx_ids <- dx_enc_lookup$DIAGNOSISID
+
+  # Procedures
+  px_enc_lookup <- patient_data$procedures %>%
+    select(PROCEDURESID, ENCOUNTERID) %>%
+    filter(ENCOUNTERID %in% valid_enc_ids)
+  valid_px_ids <- px_enc_lookup$PROCEDURESID
+
+  # Labs
+  lab_enc_lookup <- patient_data$labs %>%
+    select(LAB_RESULT_CM_ID, ENCOUNTERID) %>%
+    filter(ENCOUNTERID %in% valid_enc_ids)
+  valid_lab_ids <- lab_enc_lookup$LAB_RESULT_CM_ID
+
+  # Vitals
+  vital_enc_lookup <- patient_data$vitals %>%
+    select(VITALID, ENCOUNTERID) %>%
+    filter(ENCOUNTERID %in% valid_enc_ids)
+  valid_vital_ids <- vital_enc_lookup$VITALID
+
+  # Filter events:
+  # - Encounters: must match selected types
+  # - Linked events (dx, px, lab, vital): must be linked to matching encounters
+  # - Unlinked events (prescribing, dispensing, conditions): keep all
+  # - Birth/death markers: always keep
   events %>%
     filter(
       (event_type == "encounter" & source_key %in% valid_enc_ids) |
-      (event_type %in% c("diagnosis", "procedure", "lab", "vital") &
-         # This requires looking up the encounter ID - simplified version
-         TRUE) |
+      (event_type == "diagnosis" & source_key %in% valid_dx_ids) |
+      (event_type == "procedure" & source_key %in% valid_px_ids) |
+      (event_type == "lab" & source_key %in% valid_lab_ids) |
+      (event_type == "vital" & source_key %in% valid_vital_ids) |
       (event_type %in% c("prescribing", "dispensing", "condition", "death", "birth"))
     )
 }
@@ -518,6 +531,11 @@ apply_all_filters <- function(events, patient_data, filters) {
   # Source system filter
   if (!is.null(filters$source_systems)) {
     result <- filter_by_source_system(result, filters$source_systems)
+  }
+
+  # Encounter type filter
+  if (!is.null(filters$enc_types)) {
+    result <- filter_by_encounter_type(result, patient_data, filters$enc_types)
   }
 
   result

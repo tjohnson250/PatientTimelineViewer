@@ -31,7 +31,7 @@ Updated the semantic filter to search **all relevant medication name fields** in
 
 ### Changes Made
 
-#### 1. R/pcornet_schema.txt (lines 29-45)
+#### 1. R/pcornet_schema.txt
 
 Added detailed field documentation:
 
@@ -51,7 +51,7 @@ DISPENSING
     - RAW_NDC (raw NDC code)
 ```
 
-#### 2. R/semantic_filter.R (lines 59-62)
+#### 2. R/semantic_filter.R
 
 Added critical requirement #9:
 
@@ -62,7 +62,7 @@ Added critical requirement #9:
    - Use OR to search all fields for comprehensive results
 ```
 
-#### 3. R/semantic_filter.R (lines 84-108)
+#### 3. R/semantic_filter.R
 
 Updated medication query example:
 

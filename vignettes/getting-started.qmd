@@ -45,6 +45,14 @@ install.packages("duckdb")
 install.packages("odbc")
 ```
 
+### Optional: ICD Code Descriptions
+
+To display human-readable descriptions for ICD-10 and ICD-9 diagnosis codes:
+
+```{r}
+install.packages("icd.data")
+```
+
 ### Optional: AI-Powered Filtering
 
 To enable natural language filtering with Claude AI:
@@ -68,7 +76,7 @@ library(PatientTimelineViewer)
 runExample()
 ```
 
-This opens the timeline viewer in your browser. Enter a patient ID (try `PAT0000001` or `PAT0000002` with the sample data) and click "Load Patient".
+This opens the timeline viewer in your browser. Start typing a patient ID (try `PAT` to see autocomplete suggestions with the sample data) and click "Load Patient". The autocomplete shows matching PATIDs with DOB and sex details after 2 characters.
 
 ## Configuration
 
@@ -173,32 +181,42 @@ The timeline displays these PCORnet CDM event types:
 | Event Type | Color | Description |
 |------------|-------|-------------|
 | Encounters | Blue (#3498db) | Hospital visits, ED visits, outpatient |
-| Diagnoses | Coral (#e74c3c) | ICD-9/10 diagnosis codes |
+| Diagnoses | Coral (#e74c3c) | ICD-9/10 diagnosis codes (with automatic ICD description lookup) |
 | Procedures | Purple (#9b59b6) | CPT, HCPCS, ICD procedure codes |
-| Labs | Green (#27ae60) | Lab results with values |
+| Labs | Green (#27ae60) | Lab results with values (abnormal results highlighted) |
 | Prescriptions | Orange (#e67e22) | Prescribed medications |
 | Dispensing | Amber (#f39c12) | Dispensed medications |
 | Vitals | Teal (#1abc9c) | BP, height, weight, BMI |
 | Conditions | Pink (#e91e63) | Problem list conditions |
 | Death | Dark Gray (#2c3e50) | Death record marker |
 
-### Aggregation Options
+### Display Options
 
-Control how events are grouped on the timeline:
+- **Color By**: Choose between "Event Type" (default color scheme above) and "Source System" coloring (events colored by contributing data source)
+- **Show Event Labels**: Toggle text labels on timeline markers; when off, point events appear as compact dots
+- **Aggregation**: Individual, Daily, or Weekly event grouping
+- **Auto-Clustering**: Automatically cluster nearby events as you zoom in/out
 
-- **Individual**: Every event shown separately
-- **Daily**: Events of the same type on the same day are combined
-- **Weekly**: Events grouped by ISO week
+### Overview Minimap
+
+Below the main timeline, a miniature overview shows the full date range with:
+
+- **Draggable viewport**: Pan the main timeline by dragging the blue viewport rectangle
+- **Filter range handles**: Orange handles at the edges that set the date range filter when dragged; changes sync bidirectionally with the date input fields
 
 ### Filtering Options
 
 #### Event Type Checkboxes
 
-Toggle visibility of each event type using the checkboxes.
+Toggle visibility of each event type using checkboxes that display event counts.
+
+#### Source System Filter
+
+When a patient has data from multiple source systems, filter by contributing system. Events show colored left-border indicators identifying their source.
 
 #### Date Range
 
-Filter events to a specific date range.
+Filter events to a specific date range using the date inputs or by dragging the orange filter range handles on the minimap.
 
 #### Advanced Filters
 
@@ -214,7 +232,7 @@ Expand "Advanced Filters" to access:
 
 If configured with an Anthropic API key, use natural language queries:
 
-- "Show statins"
+- "Show statins" (searches both prescribing and dispensing tables)
 - "Show encounters with A1c > 9"
 - "Show only inpatient encounters"
 - "Show diagnoses containing diabetes"
@@ -227,6 +245,7 @@ If configured with an Anthropic API key, use natural language queries:
 - **Drag**: Pan left/right on timeline
 - **Fit All**: Zoom to show all events
 - **Show Related Events**: For encounters, zoom to that visit's date range
+- **Resize**: Drag the bottom edge of the timeline pane to adjust height
 
 ## Accessing Sample Data
 

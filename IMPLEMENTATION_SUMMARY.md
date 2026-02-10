@@ -32,20 +32,20 @@ December 2, 2025
 
 ## Files Modified
 
-### 1. app.R
+### 1. R/app_ui_server.R (formerly in app.R, now in single source of truth module)
 
 **Added imports/sources:**
 - Source `R/semantic_filter.R`
 - API key check at startup (warns if ANTHROPIC_API_KEY not set)
 
-**UI Changes:**
+**UI Changes (in `timeline_ui()`):**
 - New "AI-Powered Filter" panel above existing filters
 - Text input for natural language queries
 - "Apply" and "Clear" buttons
 - Status/error message display area
 - Collapsible "View Generated SQL" panel with syntax highlighting
 
-**Server Changes:**
+**Server Changes (in `timeline_server`):**
 - Added reactive values:
   - `semantic_filter_active`: Boolean flag
   - `semantic_filter_sql`: Generated SQL query
@@ -59,10 +59,7 @@ December 2, 2025
 - Modified `filtered_events` reactive:
   - Now passes semantic filter results to `apply_all_filters()`
 
-**Location in app.R:**
-- UI: Lines 134-197 (semantic filter panel)
-- Server reactive values: Lines 411-414
-- Server logic: Lines 752-880
+**Note:** The UI and server logic was originally in `app.R` but has since been refactored into `R/app_ui_server.R` as the single source of truth for both development (`app.R`) and package distribution (`runExample()`/`viewTimeline()`).
 
 ### 2. R/filter_helpers.R
 
@@ -262,10 +259,10 @@ For a typical user session (10-20 queries): ~$0.10 USD
 
 If the feature needs to be disabled:
 
-1. Comment out the semantic filter UI panel in app.R (lines 134-197)
-2. Remove `source("R/semantic_filter.R")` from app.R (line 19)
-3. Remove semantic filter parameters from `filtered_events` reactive
-4. Remove `filter_by_semantic_results()` call from `apply_all_filters()`
+1. Comment out the semantic filter UI panel in `R/app_ui_server.R` (`timeline_ui()` function)
+2. Remove `source("R/semantic_filter.R")` from `app.R`
+3. Remove semantic filter parameters from `filtered_events` reactive in `R/app_ui_server.R`
+4. Remove `filter_by_semantic_results()` call from `apply_all_filters()` in `R/filter_helpers.R`
 
 Or simply don't set the ANTHROPIC_API_KEY environment variable (feature will be non-functional but won't break the app).
 

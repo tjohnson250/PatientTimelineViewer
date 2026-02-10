@@ -39,11 +39,22 @@ The application uses `config.yml` with profile-based configuration. Configuratio
 
 The application follows a modular architecture with clear separation of concerns:
 
-1. **app.R**: Main Shiny application (UI + Server)
-2. **R/db_queries.R**: Database abstraction layer
-3. **R/data_transforms.R**: Data transformation to timeline format
-4. **R/aggregation.R**: Event aggregation logic
-5. **R/filter_helpers.R**: Filtering operations
+1. **app.R**: Development entry point (sources modules, runs shinyApp)
+2. **R/app_ui_server.R**: Single source of truth for UI (`timeline_ui()`) and server (`timeline_server`) logic
+3. **R/db_queries.R**: Database abstraction layer (connections, queries, PATID autocomplete search)
+4. **R/data_transforms.R**: Data transformation to timeline format (includes ICD code description integration)
+5. **R/aggregation.R**: Event aggregation logic
+6. **R/filter_helpers.R**: Filtering operations (event type, date range, encounter type, source system, semantic results)
+7. **R/semantic_filter.R**: AI-powered semantic filtering via Claude API (optional, requires `httr2` and API key)
+8. **R/icd_lookup.R**: ICD-10-CM and ICD-9-CM code description lookups (optional, requires `icd.data`)
+9. **R/runExample.R**: Package interface functions (`runExample()`, `viewTimeline()`, `stopViewer()`, `get_sample_data_path()`)
+10. **R/globals.R**: Global variable declarations for R CMD check compliance
+
+JavaScript modules in `www/`:
+- **cluster-colors.js**: Manages color assignment for clustered events
+- **timeline-markers.js**: Timeline marker manipulation and rendering
+- **timeline-resizer.js**: Draggable resize handle for timeline pane height
+- **timeline-overview.js**: Minimap/overview panel with draggable viewport and filter range handles
 
 ### Data Flow
 
@@ -118,12 +129,15 @@ Only point events are aggregated. Range events (encounters with discharge dates)
 
 Filters are applied in `apply_all_filters()` sequentially:
 
-1. Event type selection (checkboxes)
-2. Date range
-3. Diagnosis code pattern (SQL LIKE syntax)
-4. Procedure code pattern (SQL LIKE syntax)
-5. Lab name (partial text match)
-6. Medication name (partial text match)
+1. Semantic filter results (AI-generated SQL, applied first if active)
+2. Event type selection (checkboxes)
+3. Source system selection (checkboxes, when patient has multiple sources)
+4. Date range
+5. Encounter type (IP, ED, AV, etc. - also filters linked diagnoses/procedures/labs/vitals)
+6. Diagnosis code pattern (SQL LIKE syntax)
+7. Procedure code pattern (SQL LIKE syntax)
+8. Lab name (partial text match)
+9. Medication name (partial text match)
 
 Each filter function:
 - Returns the full dataset if filter is empty/null
@@ -136,11 +150,16 @@ The server maintains state in `rv` reactive values:
 
 ```r
 rv <- reactiveValues(
-  patient_data = NULL,      # List of raw data frames from database
-  timeline_events = NULL,   # Transformed events (before filtering)
-  selected_event = NULL,    # Currently selected event details
-  db_connections = NULL,    # Active database connections
-  date_range = NULL         # Min/max dates for the patient
+  patient_data = NULL,          # List of raw data frames from database
+  timeline_events = NULL,       # Transformed events (before filtering)
+  selected_event = NULL,        # Currently selected event details
+  db_connections = NULL,        # Active database connections
+  date_range = NULL,            # Min/max dates for the patient
+  semantic_filter_active = FALSE,  # Whether AI filter is currently applied
+  semantic_filter_sql = NULL,      # Generated SQL query text
+  semantic_filter_table = NULL,    # Which table(s) the semantic filter targets
+  semantic_filter_results = NULL,  # Query results from semantic filter
+  loading_in_progress = FALSE      # Whether patient data is currently loading
 )
 ```
 
@@ -160,8 +179,8 @@ The application queries these PCORnet Common Data Model tables:
 - DEATH_CAUSE
 
 Additionally, from MasterPatientIndex database:
-- Mpi (source system mappings)
-- SourceRecords_Ext (CDM PATID to UID mapping)
+- Mpi (source system mappings: Src, Lid, Uid)
+- MPI_Src (source system descriptions)
 
 ## Event Type Color Scheme
 
@@ -178,6 +197,29 @@ Colors are defined in `www/custom.css` and should remain consistent:
 - Death: #2c3e50 (Dark Gray)
 
 ## Special Features
+
+### PATID Autocomplete
+
+Type-ahead search with 300ms debounce. After 2+ characters are typed, matching PATIDs are queried from the DEMOGRAPHIC table and shown in a dropdown with DOB/sex details. Clicking a result auto-loads the patient. Implementation uses custom JavaScript in `app_ui_server.R` and the `search_patids()` function in `db_queries.R`.
+
+### ICD Code Description Lookup
+
+When the `icd.data` package is installed, diagnosis events automatically display human-readable code descriptions alongside ICD-10-CM and ICD-9-CM codes. Lookups are cached in memory for performance. Implementation is in `R/icd_lookup.R` with integration in `data_transforms.R`.
+
+### Timeline Overview Minimap
+
+A miniature representation of the full timeline displayed below the main timeline. Features:
+- **Draggable viewport rectangle**: Pan the main timeline by dragging the blue viewport area
+- **Orange filter range handles**: Drag to set the date range filter; changes sync bidirectionally with the date inputs
+- Implementation in `www/timeline-overview.js` with server-side support in `app_ui_server.R`
+
+### Event Label Toggle
+
+A "Show event labels" checkbox in Display Options controls whether text labels appear on timeline markers. When unchecked, a `hide-labels` CSS class is applied and point events shrink to 6px dots. Uses DataSet update to force vis.js to remeasure items after toggling.
+
+### Color Scheme Selector
+
+Toggle between "Event Type" (default) and "Source System" coloring via a dropdown. Source system colors use a palette of 8 distinct colors with CSS left-border indicators. Source system information comes from the MPI database when available.
 
 ### Related Events for Encounters
 
@@ -201,29 +243,42 @@ Labs with ABN_IND values (AB, AH, AL, CH, CL, CR) get special styling:
 - className includes "event-lab-abnormal"
 - Indicator appended to formatted result in tooltip
 
+### Resizable Timeline Pane
+
+A draggable resize handle at the bottom of the timeline pane allows users to adjust the timeline height. Implementation in `www/timeline-resizer.js`.
+
+### Loading Progress Indicator
+
+When loading patient data, a step-by-step progress indicator shows which data tables are being queried. The progress is cancellable.
+
 ## Adding New Event Types
 
 To add a new PCORnet table type:
 
-1. **db_queries.R**: Add `query_[tablename]()` function
-2. **db_queries.R**: Add table to `load_patient_data()` list
-3. **data_transforms.R**: Create `transform_[tablename]()` following the established pattern
-4. **data_transforms.R**: Add to `transform_all_to_timevis()` bind_rows
-5. **filter_helpers.R**: Add to `get_event_type_counts()`
-6. **app.R**: Add checkbox to UI in `output$event_type_checkboxes`
-7. **app.R**: Add to `get_selected_event_types()` reactive
+1. **R/db_queries.R**: Add `query_[tablename]()` function
+2. **R/db_queries.R**: Add table to `load_patient_data()` list
+3. **R/data_transforms.R**: Create `transform_[tablename]()` following the established pattern
+4. **R/data_transforms.R**: Add to `transform_all_to_timevis()` bind_rows
+5. **R/filter_helpers.R**: Add to `get_event_type_counts()`
+6. **R/app_ui_server.R**: Add checkbox to UI in `output$event_type_checkboxes`
+7. **R/app_ui_server.R**: Add to `get_selected_event_types()` reactive
 8. **www/custom.css**: Define color class
-9. **app.R**: Add event detail rendering in `output$event_details`
+9. **R/app_ui_server.R**: Add event detail rendering in `output$event_details`
 
 ## Testing with DuckDB
 
-For local development/testing, create a DuckDB database with PCORnet schema:
+The package includes bundled synthetic sample data in `inst/extdata/`. For local development/testing:
 
 ```r
+# Use bundled sample data (recommended)
+library(PatientTimelineViewer)
+runExample()
+
+# Or create your own DuckDB database with PCORnet schema
 library(duckdb)
 library(DBI)
 
-con <- dbConnect(duckdb(), "data/cdw.duckdb")
+con <- dbConnect(duckdb(), "inst/extdata/pcornet_cdw.duckdb")
 
 # Create tables matching PCORnet CDM schema
 # No need for "dbo." schema prefix in DuckDB
@@ -232,7 +287,9 @@ con <- dbConnect(duckdb(), "data/cdw.duckdb")
 dbDisconnect(con)
 ```
 
-Then set `config.yml` to use `db_type: "duckdb"` and point to your database file.
+Then set `config.yml` to use `db_type: "duckdb"` and point `cdw_path`/`mpi_path` to your database files.
+
+The default config already points to `./inst/extdata/pcornet_cdw.duckdb` and `./inst/extdata/mpi.duckdb`.
 
 ## Common Pitfalls
 

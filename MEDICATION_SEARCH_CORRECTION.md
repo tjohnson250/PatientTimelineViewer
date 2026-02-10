@@ -34,7 +34,7 @@ When users search for "medications for pain relief", Claude needs to translate t
 
 ## Solution
 
-### 1. Updated Schema Documentation (R/pcornet_schema.txt)
+### 1. Updated Schema Documentation (R/pcornet_schema.txt / inst/extdata/pcornet_schema.txt)
 
 **Before:**
 ```

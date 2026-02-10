@@ -41,7 +41,7 @@ FROM dbo.DISPENSING
 WHERE PATID = 'xyz' AND RAW_DISP_MED_NAME LIKE '%statin%'
 ```
 
-### 2. app.R (lines 817-845)
+### 2. R/app_ui_server.R (table detection logic, originally in app.R)
 
 **Enhanced table detection logic**:
 - Checks for both PRESCRIBING and DISPENSING in SQL
@@ -188,9 +188,9 @@ Updated files:
 
 If issues arise, revert these changes:
 
-1. **R/semantic_filter.R line 58**: Remove requirement #8 and UNION example
-2. **app.R lines 817-845**: Simplify to original single-table detection
-3. **R/filter_helpers.R lines 233-267**: Remove "medications" special case
+1. **R/semantic_filter.R**: Remove requirement #8 and UNION example
+2. **R/app_ui_server.R**: Simplify to original single-table detection
+3. **R/filter_helpers.R**: Remove "medications" special case
 
 Or simply set a flag to disable UNION queries while keeping other functionality.
 

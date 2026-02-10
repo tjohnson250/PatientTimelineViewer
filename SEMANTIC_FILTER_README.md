@@ -139,16 +139,13 @@ The semantic filter includes multiple security layers:
 - **No Injection**: Uses parameterized queries where possible
 - **Transparent**: Shows generated SQL for user review
 
-### Files Added
+### Files
 
 - **R/semantic_filter.R**: Core functions for SQL generation and validation
-- **R/pcornet_schema.txt**: PCORnet CDM schema documentation for Claude
+- **R/pcornet_schema.txt** / **inst/extdata/pcornet_schema.txt**: PCORnet CDM schema documentation for Claude
+- **R/app_ui_server.R**: UI elements and server logic for semantic filtering
+- **R/filter_helpers.R**: `filter_by_semantic_results()` function
 - **SEMANTIC_FILTER_README.md**: This documentation file
-
-### Files Modified
-
-- **app.R**: Added UI elements and server logic for semantic filtering
-- **R/filter_helpers.R**: Added `filter_by_semantic_results()` function
 
 ## Troubleshooting
 
@@ -223,7 +220,7 @@ Consider caching frequently used queries or limiting usage for cost control.
 
 ## Limitations
 
-1. **Single table queries**: Each query targets one PCORnet table at a time (cannot join multiple tables)
+1. **Limited cross-table queries**: Medication queries automatically use UNION to search both PRESCRIBING and DISPENSING tables, but arbitrary multi-table joins are not supported
 2. **Basic aggregations**: Complex aggregations may not be supported
 3. **Interpretation accuracy**: AI may misinterpret ambiguous queries
 4. **Schema knowledge**: Limited to PCORnet CDM schema as documented in pcornet_schema.txt

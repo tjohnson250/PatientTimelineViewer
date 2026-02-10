@@ -103,7 +103,7 @@ The `viewTimeline()` function accepts:
 - `db_type`: Either "mssql" or "duckdb"
 - `background`: For MSSQL, defaults to TRUE (non-blocking). Ignored for DuckDB (always FALSE).
 
-**About the MPI connection:** The MPI database contains source system mappings (tables: `Mpi`, `MPI_Src`, `EnterpriseRecords_Ext`) that show which source systems contributed data for a patient. If you don't have an MPI database or don't need this information, you can pass `NULL` for `mpi_conn` - the app will work normally but won't display source system information in the demographics panel.
+**About the MPI connection:** The MPI database contains source system mappings (tables: `Mpi`, `MPI_Src`) that show which source systems contributed data for a patient. If you don't have an MPI database or don't need this information, you can pass `NULL` for `mpi_conn` - the app will work normally but won't display source system information in the demographics panel.
 
 **Note:** For MSSQL connections with `background = TRUE`, connections you pass to `viewTimeline()` are not closed when the app exits - you manage their lifecycle. For DuckDB or `background = FALSE`, the app uses your connections directly.
 
@@ -141,12 +141,20 @@ shiny::runApp()
 -   **Demographics Display**: Shows patient information including PATID, DOB, age, sex, race, ethnicity, and source systems
 -   **Interactive Timeline**: Visual timeline of all clinical events using the timevis library
 -   **Multiple Event Types**: Encounters, Diagnoses, Procedures, Labs, Prescriptions, Dispensing, Vitals, Conditions, and Death
--   **AI-Powered Semantic Filtering** (Optional): Use natural language queries like "Show statins" or "Show encounters with A1c \> 9 to filter patient data
+-   **PATID Autocomplete**: Type-ahead search with debounced input - start typing a PATID (min 2 characters) to see matching patients with DOB/sex details
+-   **ICD Code Descriptions**: Automatic lookup of ICD-10-CM and ICD-9-CM code descriptions on diagnosis events using the `icd.data` package
+-   **AI-Powered Semantic Filtering** (Optional): Use natural language queries like "Show statins" or "Show encounters with A1c > 9" to filter patient data
 -   **Aggregation Options**: View events individually, aggregated by day, or by week
--   **Automatic Clustering:** Automatically cluster events as you zoom in and out of the timeline
--   **Filtering**: Filter by event type, date range, diagnosis codes, procedure codes, lab names, and medication names
+-   **Automatic Clustering**: Automatically cluster events as you zoom in and out of the timeline
+-   **Color Scheme Selector**: Toggle between coloring events by Event Type or by Source System
+-   **Source System Filtering**: Filter events by contributing source system with colored visual indicators
+-   **Timeline Overview Minimap**: A miniature overview of the full timeline with a draggable viewport and orange filter range handles for quick date navigation
+-   **Event Label Toggle**: Show or hide text labels on timeline markers; when hidden, point events collapse to compact dots
+-   **Resizable Timeline**: Drag the bottom edge of the timeline pane to adjust its height
+-   **Filtering**: Filter by event type, source system, date range, encounter type, diagnosis codes, procedure codes, lab names, and medication names
 -   **Event Details**: Click any event to view complete record details
 -   **Related Events**: For encounters, quickly zoom to see all events during that visit
+-   **Loading Progress Indicator**: Step-by-step progress tracking when loading patient data
 -   **Dual Database Support**: Works with MS SQL Server (production) or DuckDB (development/testing)
 
 ## Event Type Color Scheme
@@ -175,6 +183,12 @@ install.packages("odbc")
 
 ``` r
 install.packages("duckdb")
+```
+
+### For ICD Code Descriptions (optional)
+
+``` r
+install.packages("icd.data")
 ```
 
 ### For AI-Powered Semantic Filtering (optional)
@@ -229,8 +243,8 @@ default:
   db_type: "duckdb"
   
   duckdb:
-    cdw_path: "./data/cdw.duckdb"
-    mpi_path: "./data/mpi.duckdb"
+    cdw_path: "./inst/extdata/pcornet_cdw.duckdb"
+    mpi_path: "./inst/extdata/mpi.duckdb"
 ```
 
 ### Using Configuration Profiles
@@ -241,8 +255,8 @@ You can define multiple profiles and switch between them:
 default:
   db_type: "duckdb"
   duckdb:
-    cdw_path: "./data/cdw.duckdb"
-    mpi_path: "./data/mpi.duckdb"
+    cdw_path: "./inst/extdata/pcornet_cdw.duckdb"
+    mpi_path: "./inst/extdata/mpi.duckdb"
 
 production:
   db_type: "mssql"
@@ -357,22 +371,38 @@ The feature is optional. If `ANTHROPIC_API_KEY` is not set, the application will
 
 ## Project Structure
 
-```         
+```
 PatientTimelineViewer/
-├── app.R                         # Main Shiny application
+├── app.R                         # Development entry point (sources modules)
 ├── R/
+│   ├── app_ui_server.R           # Single source of truth for UI + server logic
 │   ├── db_queries.R              # SQL queries for each PCORnet table
 │   ├── data_transforms.R         # Convert query results → timevis format
 │   ├── aggregation.R             # Aggregation logic (none/daily/weekly)
 │   ├── filter_helpers.R          # Filtering functions
 │   ├── semantic_filter.R         # AI-powered semantic filtering (optional)
+│   ├── icd_lookup.R              # ICD-10/ICD-9 code description lookups
+│   ├── runExample.R              # Package interface (runExample, viewTimeline)
+│   ├── globals.R                 # Global variable declarations
+│   ├── PatientTimelineViewer-package.R  # Package documentation
 │   └── pcornet_schema.txt        # PCORnet schema for AI context
 ├── config.yml                    # Database connection parameters
 ├── www/
-│   └── custom.css                # Color scheme and styling
-├── data/                         # (Optional) DuckDB database files
-│   ├── cdw.duckdb
-│   └── mpi.duckdb
+│   ├── custom.css                # Color scheme and styling
+│   ├── cluster-colors.js         # Cluster color management
+│   ├── timeline-markers.js       # Timeline marker manipulation
+│   ├── timeline-resizer.js       # Draggable timeline resize handle
+│   └── timeline-overview.js      # Minimap/overview panel logic
+├── inst/extdata/                  # Bundled sample data
+│   ├── pcornet_cdw.duckdb        # Synthetic CDW database
+│   ├── mpi.duckdb                # Synthetic MPI database
+│   └── pcornet_schema.txt        # PCORnet schema for semantic filter
+├── vignettes/
+│   └── getting-started.qmd       # Getting started vignette
+├── tests/testthat/               # Unit tests
+│   ├── test-aggregation.R
+│   ├── test-filters.R
+│   └── test-transforms.R
 ├── README.md                     # This file
 └── SEMANTIC_FILTER_README.md     # Detailed semantic filter documentation
 ```
@@ -387,8 +417,8 @@ PatientTimelineViewer/
 shiny::runApp()
 ```
 
-4.  Enter a PATID in the input field and click "Load Patient"
-5.  Use the timeline controls to explore the patient's clinical history
+4.  Start typing a PATID in the search field (autocomplete suggestions appear after 2 characters) and click "Load Patient"
+5.  Use the timeline controls, minimap, and filters to explore the patient's clinical history
 
 ## Creating a DuckDB Test Database
 
@@ -399,7 +429,7 @@ library(duckdb)
 library(DBI)
 
 # Create database
-con <- dbConnect(duckdb(), "data/cdw.duckdb")
+con <- dbConnect(duckdb(), "inst/extdata/pcornet_cdw.duckdb")
 
 # Create tables (example for DEMOGRAPHIC)
 dbExecute(con, "
@@ -443,8 +473,11 @@ dbDisconnect(con)
 -   **Click**: Select event to view full record in details panel
 -   **Scroll**: Zoom in/out on timeline
 -   **Drag**: Pan left/right on timeline
--   **Fit Button**: Zoom to show all events
+-   **Fit All Button**: Zoom to show all events
 -   **Show Related Events**: (For encounters) Zoom to encounter date range
+-   **Overview Minimap**: Drag the viewport rectangle to pan; drag orange handles to set filter date range
+-   **Resize Handle**: Drag the bottom edge of the timeline to adjust height
+-   **Label Toggle**: Use the "Show event labels" checkbox to toggle text on/off markers
 
 ## Aggregation Modes
 
@@ -458,9 +491,26 @@ dbDisconnect(con)
 
 ## Filtering Options
 
+### Event Type Checkboxes
+
+Toggle visibility of each event type (Encounters, Diagnoses, Procedures, Labs, etc.) using checkboxes with event counts.
+
+### Source System Filter
+
+When a patient has data from multiple source systems, checkboxes appear to filter by contributing system. Events display colored left-border indicators showing their source.
+
+### Date Range
+
+Filter events to a specific date range using the date inputs or by dragging the orange filter range handles on the minimap.
+
 ### AI-Powered Semantic Filter (Optional)
 
-If configured with an Anthropic API key, use natural language queries: - "Show statins" - "Show encounters with A1c \> 9" - "Show only inpatient encounters" - "Show diagnoses containing diabetes"
+If configured with an Anthropic API key, use natural language queries:
+
+-   "Show statins"
+-   "Show encounters with A1c > 9"
+-   "Show only inpatient encounters"
+-   "Show diagnoses containing diabetes"
 
 See [AI-Powered Semantic Filtering](#ai-powered-semantic-filtering-optional-feature) section above for setup.
 
@@ -474,12 +524,20 @@ Access via the expandable "Advanced Filters" section:
 -   **Medication Name**: Partial text match
 -   **Encounter Type**: Filter by IP, ED, AV, etc.
 
+## Display Options
+
+-   **Color By**: Choose between "Event Type" (default) and "Source System" color schemes
+-   **Show Event Labels**: Toggle text labels on timeline markers on/off; when off, point events appear as compact dots
+-   **Aggregation**: Switch between Individual, Daily, and Weekly event grouping
+-   **Auto-Clustering**: Enable/disable automatic event clustering based on zoom level
+
 ## Notes
 
 -   Death events are displayed as a special marker spanning the timeline
 -   Events after death date remain visible for data quality review
 -   Abnormal lab results are highlighted with a warning indicator
 -   Prescription end dates are calculated from days supply if not explicitly provided
+-   ICD-10 and ICD-9 diagnosis code descriptions are automatically displayed when the `icd.data` package is installed
 
 ## Troubleshooting
 
@@ -512,6 +570,9 @@ install.packages("odbc")
 
 # For DuckDB
 install.packages("duckdb")
+
+# For ICD code descriptions
+install.packages("icd.data")
 
 # For semantic filtering
 install.packages("httr2")

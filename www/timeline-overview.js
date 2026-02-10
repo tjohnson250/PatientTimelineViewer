@@ -16,13 +16,24 @@
   var totalHeight = 78;   // svgHeight + axisHeight
   var minViewportWidth = 8; // Minimum draggable viewport width in px
 
-  // Drag state
+  // Drag state (viewport)
   var isDragging = false;
   var isResizingLeft = false;
   var isResizingRight = false;
   var dragStartX = 0;
   var dragStartVpX = 0;
   var dragStartVpW = 0;
+
+  // Filter range state
+  var filterStartDate = null;   // Date or null (full range)
+  var filterEndDate = null;     // Date or null (full range)
+  var filterRangeIsActive = false;
+  var isFilterDraggingLeft = false;
+  var isFilterDraggingRight = false;
+  var filterDragStartX = 0;
+  var filterDragStartLeft = 0;
+  var filterDragStartRight = 0;
+  var filterUpdateFromR = false; // Guard flag: R→JS update in progress
 
   // DOM references
   var overviewSvg = null;
@@ -33,6 +44,13 @@
   var dimLeft = null;
   var dimRight = null;
   var axisGroup = null;
+
+  // Filter range DOM references
+  var filterDimLeft = null;
+  var filterDimRight = null;
+  var filterBand = null;
+  var filterLeftHandle = null;
+  var filterRightHandle = null;
 
   // Color map matching CSS custom properties
   var colorMap = {
@@ -193,7 +211,36 @@
     axisGroup = createSvgElement('g', { class: 'overview-axis' });
     overviewSvg.appendChild(axisGroup);
 
-    // Dim overlays (areas outside the viewport)
+    // Filter range dim overlays (areas outside filter range)
+    filterDimLeft = createSvgElement('rect', {
+      class: 'filter-dim', x: 0, y: 0, width: 0, height: svgHeight,
+      fill: 'rgba(0,0,0,0.08)', 'pointer-events': 'none',
+      opacity: 0
+    });
+    overviewSvg.appendChild(filterDimLeft);
+
+    filterDimRight = createSvgElement('rect', {
+      class: 'filter-dim', x: 0, y: 0, width: 0, height: svgHeight,
+      fill: 'rgba(0,0,0,0.08)', 'pointer-events': 'none',
+      opacity: 0
+    });
+    overviewSvg.appendChild(filterDimRight);
+
+    // Filter range band
+    filterBand = createSvgElement('rect', {
+      class: 'filter-band',
+      x: 0, y: 0, width: 0, height: svgHeight,
+      fill: 'rgba(230, 126, 34, 0.12)',
+      stroke: '#e67e22',
+      'stroke-width': 1,
+      'stroke-dasharray': '4,3',
+      'pointer-events': 'none',
+      opacity: 0,
+      rx: 1, ry: 1
+    });
+    overviewSvg.appendChild(filterBand);
+
+    // Viewport dim overlays (areas outside the viewport)
     dimLeft = createSvgElement('rect', {
       class: 'overview-dim', x: 0, y: 0, width: 0, height: svgHeight,
       fill: 'rgba(0,0,0,0.15)', 'pointer-events': 'none'
@@ -218,7 +265,7 @@
     });
     overviewSvg.appendChild(viewportRect);
 
-    // Left resize handle
+    // Left viewport resize handle
     leftHandle = createSvgElement('rect', {
       class: 'overview-handle overview-handle-left',
       x: 0, y: 0, width: 6, height: svgHeight,
@@ -229,7 +276,7 @@
     });
     overviewSvg.appendChild(leftHandle);
 
-    // Right resize handle
+    // Right viewport resize handle
     rightHandle = createSvgElement('rect', {
       class: 'overview-handle overview-handle-right',
       x: 0, y: 0, width: 6, height: svgHeight,
@@ -239,6 +286,28 @@
       rx: 2, ry: 2
     });
     overviewSvg.appendChild(rightHandle);
+
+    // Filter left handle (top portion only, so viewport handles remain grabbable below)
+    filterLeftHandle = createSvgElement('rect', {
+      class: 'filter-handle filter-handle-left',
+      x: 0, y: 0, width: 8, height: 18,
+      fill: '#e67e22',
+      opacity: 0.7,
+      cursor: 'ew-resize',
+      rx: 2, ry: 2
+    });
+    overviewSvg.appendChild(filterLeftHandle);
+
+    // Filter right handle (top portion only)
+    filterRightHandle = createSvgElement('rect', {
+      class: 'filter-handle filter-handle-right',
+      x: 0, y: 0, width: 8, height: 18,
+      fill: '#e67e22',
+      opacity: 0.7,
+      cursor: 'ew-resize',
+      rx: 2, ry: 2
+    });
+    overviewSvg.appendChild(filterRightHandle);
 
     return true;
   }
@@ -338,6 +407,86 @@
     dimRight.setAttribute('width', Math.max(0, svgWidth - x - w));
   }
 
+  // ---- Filter range position/size helpers ----
+
+  function getFilterRangeX() {
+    var left = parseFloat(filterLeftHandle.getAttribute('x')) + 4; // center of 8px handle
+    var right = parseFloat(filterRightHandle.getAttribute('x')) + 4;
+    return { left: left, right: right };
+  }
+
+  function updateFilterRangeVisuals(leftX, rightX) {
+    // Clamp to SVG bounds
+    leftX = Math.max(0, leftX);
+    rightX = Math.min(svgWidth, rightX);
+    if (rightX - leftX < 2) rightX = leftX + 2;
+
+    // Check if filter covers full range (within 2px tolerance)
+    var isFullRange = (leftX <= 2 && rightX >= svgWidth - 2);
+    filterRangeIsActive = !isFullRange;
+
+    // Update filter band
+    filterBand.setAttribute('x', leftX);
+    filterBand.setAttribute('width', rightX - leftX);
+    filterBand.setAttribute('opacity', isFullRange ? 0 : 1);
+
+    // Update filter dim overlays
+    filterDimLeft.setAttribute('x', 0);
+    filterDimLeft.setAttribute('width', Math.max(0, leftX));
+    filterDimLeft.setAttribute('opacity', isFullRange ? 0 : 1);
+
+    filterDimRight.setAttribute('x', rightX);
+    filterDimRight.setAttribute('width', Math.max(0, svgWidth - rightX));
+    filterDimRight.setAttribute('opacity', isFullRange ? 0 : 1);
+
+    // Position filter handles (clamp so they stay within SVG bounds)
+    filterLeftHandle.setAttribute('x', Math.max(0, leftX - 4));
+    filterRightHandle.setAttribute('x', Math.min(svgWidth - 8, rightX - 4));
+
+    // Always show handles (at edges when full range)
+    filterLeftHandle.setAttribute('opacity', isFullRange ? 0.4 : 0.7);
+    filterRightHandle.setAttribute('opacity', isFullRange ? 0.4 : 0.7);
+  }
+
+  function syncFilterRangeToState() {
+    if (!fullMin || !fullMax) return;
+
+    if (!filterStartDate || !filterEndDate) {
+      // Full range
+      updateFilterRangeVisuals(0, svgWidth);
+    } else {
+      var leftX = dateToX(filterStartDate, fullMin, fullMax, svgWidth);
+      var rightX = dateToX(filterEndDate, fullMin, fullMax, svgWidth);
+      updateFilterRangeVisuals(leftX, rightX);
+    }
+  }
+
+  function sendFilterRangeToShiny(leftX, rightX) {
+    if (filterUpdateFromR) return; // Guard: don't echo back R-initiated changes
+    if (!fullMin || !fullMax) return;
+    if (typeof Shiny === 'undefined' || !Shiny.setInputValue) return;
+
+    var startDate = xToDate(leftX, fullMin, fullMax, svgWidth);
+    var endDate = xToDate(rightX, fullMin, fullMax, svgWidth);
+
+    // Check if this is effectively the full range
+    var isFullRange = (leftX <= 2 && rightX >= svgWidth - 2);
+
+    // Format dates as YYYY-MM-DD
+    var formatDate = function(d) {
+      var y = d.getFullYear();
+      var m = ('0' + (d.getMonth() + 1)).slice(-2);
+      var day = ('0' + d.getDate()).slice(-2);
+      return y + '-' + m + '-' + day;
+    };
+
+    Shiny.setInputValue('filter_range_from_minimap', {
+      start: formatDate(startDate),
+      end: formatDate(endDate),
+      isFullRange: isFullRange
+    }, { priority: 'event' });
+  }
+
   function syncViewportToMainTimeline() {
     var widget = HTMLWidgets.find('#timeline');
     if (!widget || !widget.timeline || !fullMin || !fullMax) return;
@@ -384,7 +533,7 @@
       e.stopPropagation();
     });
 
-    // Right handle resize
+    // Right viewport handle resize
     rightHandle.addEventListener('mousedown', function(e) {
       isResizingRight = true;
       dragStartX = e.clientX;
@@ -396,11 +545,40 @@
       e.stopPropagation();
     });
 
+    // Filter left handle drag
+    filterLeftHandle.addEventListener('mousedown', function(e) {
+      isFilterDraggingLeft = true;
+      filterDragStartX = e.clientX;
+      var pos = getFilterRangeX();
+      filterDragStartLeft = pos.left;
+      filterDragStartRight = pos.right;
+      document.body.style.cursor = 'ew-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    // Filter right handle drag
+    filterRightHandle.addEventListener('mousedown', function(e) {
+      isFilterDraggingRight = true;
+      filterDragStartX = e.clientX;
+      var pos = getFilterRangeX();
+      filterDragStartLeft = pos.left;
+      filterDragStartRight = pos.right;
+      document.body.style.cursor = 'ew-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
     // Mousemove (document-level for smooth dragging outside SVG)
     document.addEventListener('mousemove', function(e) {
-      if (!isDragging && !isResizingLeft && !isResizingRight) return;
+      var anyViewportDrag = isDragging || isResizingLeft || isResizingRight;
+      var anyFilterDrag = isFilterDraggingLeft || isFilterDraggingRight;
 
-      var dx = e.clientX - dragStartX;
+      if (!anyViewportDrag && !anyFilterDrag) return;
+
+      var dx = e.clientX - (anyFilterDrag ? filterDragStartX : dragStartX);
 
       if (isDragging) {
         var newX = Math.max(0, Math.min(dragStartVpX + dx, svgWidth - dragStartVpW));
@@ -419,6 +597,12 @@
           updateViewportVisuals(dragStartVpX, newW);
           syncMainTimelineToViewport(dragStartVpX, newW);
         }
+      } else if (isFilterDraggingLeft) {
+        var newLeft = Math.max(0, Math.min(filterDragStartLeft + dx, filterDragStartRight - 2));
+        updateFilterRangeVisuals(newLeft, filterDragStartRight);
+      } else if (isFilterDraggingRight) {
+        var newRight = Math.max(filterDragStartLeft + 2, Math.min(filterDragStartRight + dx, svgWidth));
+        updateFilterRangeVisuals(filterDragStartLeft, newRight);
       }
     });
 
@@ -428,6 +612,14 @@
         isDragging = false;
         isResizingLeft = false;
         isResizingRight = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+      if (isFilterDraggingLeft || isFilterDraggingRight) {
+        var pos = getFilterRangeX();
+        sendFilterRangeToShiny(pos.left, pos.right);
+        isFilterDraggingLeft = false;
+        isFilterDraggingRight = false;
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
       }
@@ -537,6 +729,12 @@
       }
     });
 
+    // Initialize filter range to full extent
+    filterStartDate = null;
+    filterEndDate = null;
+    filterRangeIsActive = false;
+    updateFilterRangeVisuals(0, svgWidth);
+
     // Handle window resize
     var resizeTimeout;
     window.addEventListener('resize', function() {
@@ -546,6 +744,7 @@
         renderEvents();
         renderTimeAxis();
         syncViewportToMainTimeline();
+        syncFilterRangeToState();
       }, 150);
     });
 
@@ -565,6 +764,48 @@
   // Also try on document ready
   $(document).ready(function() {
     setTimeout(initOverview, 800);
+  });
+
+  // ---- Shiny custom message handlers ----
+
+  // R → JS: Update filter range visuals from date inputs
+  $(document).ready(function() {
+    if (typeof Shiny !== 'undefined') {
+      Shiny.addCustomMessageHandler('updateFilterRange', function(msg) {
+        if (!overviewInitialized || !fullMin || !fullMax) return;
+
+        filterUpdateFromR = true;
+
+        if (msg.isFullRange) {
+          filterStartDate = null;
+          filterEndDate = null;
+          updateFilterRangeVisuals(0, svgWidth);
+        } else {
+          filterStartDate = new Date(msg.start);
+          filterEndDate = new Date(msg.end);
+          var leftX = dateToX(filterStartDate, fullMin, fullMax, svgWidth);
+          var rightX = dateToX(filterEndDate, fullMin, fullMax, svgWidth);
+          updateFilterRangeVisuals(leftX, rightX);
+        }
+
+        // Reset guard after short delay
+        setTimeout(function() {
+          filterUpdateFromR = false;
+        }, 50);
+      });
+
+      // R → JS: Filter to current viewport
+      Shiny.addCustomMessageHandler('filterToView', function(msg) {
+        if (!overviewInitialized || !fullMin || !fullMax) return;
+
+        var vpX = getViewportX();
+        var vpW = getViewportW();
+        updateFilterRangeVisuals(vpX, vpX + vpW);
+
+        // Send the filter range to R
+        sendFilterRangeToShiny(vpX, vpX + vpW);
+      });
+    }
   });
 
 })();

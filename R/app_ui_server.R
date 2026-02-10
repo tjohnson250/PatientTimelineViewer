@@ -335,25 +335,6 @@ timeline_ui <- function() {
           )
         ),
 
-        # Date range
-        fluidRow(
-          style = "margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;",
-          column(6,
-            dateInput(
-              "date_start",
-              "Start Date:",
-              value = NULL
-            )
-          ),
-          column(6,
-            dateInput(
-              "date_end",
-              "End Date:",
-              value = NULL
-            )
-          )
-        ),
-
         # Advanced filters (collapsible)
         tags$details(
           class = "advanced-filters",
@@ -519,8 +500,54 @@ timeline_ui <- function() {
           )
         ),
         # Overview minimap
+        p(class = "timeline-hint",
+          style = "margin: 8px 0 2px 0;",
+          "Blue handles: drag to pan/resize viewport \u2022 Orange handles: drag to set date filter range"
+        ),
         div(
           id = "timeline-overview-container"
+        ),
+        # Date range filter controls (below minimap)
+        fluidRow(
+          style = "margin-top: 6px;",
+          column(3,
+            dateInput(
+              "date_start",
+              label = NULL,
+              value = NULL,
+              width = "100%"
+            )
+          ),
+          column(3,
+            dateInput(
+              "date_end",
+              label = NULL,
+              value = NULL,
+              width = "100%"
+            )
+          ),
+          column(3,
+            div(
+              style = "display: flex; gap: 5px; margin-top: 0px;",
+              actionButton(
+                "filter_to_view",
+                "Filter to View",
+                class = "btn-sm btn-outline-warning",
+                icon = icon("crop"),
+                title = "Set date filter to match the current timeline viewport"
+              ),
+              actionButton(
+                "reset_date_filter",
+                "Reset Filter",
+                class = "btn-sm btn-outline-secondary",
+                icon = icon("undo"),
+                title = "Reset date filter to show all events"
+              )
+            )
+          ),
+          column(3,
+            uiOutput("filter_range_label")
+          )
         )
       ),
 
@@ -589,7 +616,8 @@ timeline_server <- function(input, output, session) {
     loading_in_progress = FALSE,
     load_progress_step = 0,
     load_progress_total = 13,
-    load_progress_name = ""
+    load_progress_name = "",
+    filter_programmatic_update = FALSE
   )
 
   # Observer to update progress bar in modal
@@ -1217,24 +1245,12 @@ timeline_server <- function(input, output, session) {
       return(timevis::timevis(data.frame(), groups = get_timeline_groups()))
     }
 
-    # Calculate the actual date range from the events
+    # Calculate the actual date range from clinical events only
+    # (birth/death markers are visible as vertical lines but don't dictate the window)
     event_dates <- as.Date(events$start)
 
-    # Also include birth and death dates if available
-    all_dates <- event_dates
-    if (!is.null(rv$patient_data$demographic) &&
-        nrow(rv$patient_data$demographic) > 0 &&
-        !is.na(rv$patient_data$demographic$BIRTH_DATE[1])) {
-      all_dates <- c(all_dates, as.Date(rv$patient_data$demographic$BIRTH_DATE[1]))
-    }
-    if (!is.null(rv$patient_data$death) &&
-        nrow(rv$patient_data$death) > 0 &&
-        !is.na(rv$patient_data$death$DEATH_DATE[1])) {
-      all_dates <- c(all_dates, as.Date(rv$patient_data$death$DEATH_DATE[1]))
-    }
-
-    min_date <- min(all_dates, na.rm = TRUE)
-    max_date <- max(all_dates, na.rm = TRUE)
+    min_date <- min(event_dates, na.rm = TRUE)
+    max_date <- max(event_dates, na.rm = TRUE)
 
     # Add some padding (5% on each side)
     date_range <- as.numeric(max_date - min_date)
@@ -1663,26 +1679,14 @@ timeline_server <- function(input, output, session) {
 
   # Zoom controls
   observeEvent(input$zoom_fit, {
-    # Calculate window from actual filtered events
+    # Calculate window from actual filtered events only
+    # (birth/death markers are visible as vertical lines but don't dictate the window)
     events <- filtered_events()
     if (!is.null(events) && nrow(events) > 0) {
       event_dates <- as.Date(events$start)
 
-      # Also include birth and death dates if available
-      all_dates <- event_dates
-      if (!is.null(rv$patient_data$demographic) &&
-          nrow(rv$patient_data$demographic) > 0 &&
-          !is.na(rv$patient_data$demographic$BIRTH_DATE[1])) {
-        all_dates <- c(all_dates, as.Date(rv$patient_data$demographic$BIRTH_DATE[1]))
-      }
-      if (!is.null(rv$patient_data$death) &&
-          nrow(rv$patient_data$death) > 0 &&
-          !is.na(rv$patient_data$death$DEATH_DATE[1])) {
-        all_dates <- c(all_dates, as.Date(rv$patient_data$death$DEATH_DATE[1]))
-      }
-
-      min_date <- min(all_dates, na.rm = TRUE)
-      max_date <- max(all_dates, na.rm = TRUE)
+      min_date <- min(event_dates, na.rm = TRUE)
+      max_date <- max(event_dates, na.rm = TRUE)
 
       # Add padding (5% on each side)
       date_range <- as.numeric(max_date - min_date)
@@ -1733,9 +1737,18 @@ timeline_server <- function(input, output, session) {
         as.Date(enc$ADMIT_DATE) + 1
       }
 
-      # Update date filters
+      # Update date filters (with guard to prevent feedback loop)
+      rv$filter_programmatic_update <- TRUE
       updateDateInput(session, "date_start", value = start)
       updateDateInput(session, "date_end", value = end)
+      shinyjs::delay(100, { rv$filter_programmatic_update <- FALSE })
+
+      # Update filter overlay on minimap
+      session$sendCustomMessage("updateFilterRange", list(
+        start = as.character(start),
+        end = as.character(end),
+        isFullRange = FALSE
+      ))
 
       # Zoom timeline to this range
       set_timeline_window(start, end)
@@ -1746,11 +1759,118 @@ timeline_server <- function(input, output, session) {
   observeEvent(input$reset_view, {
     # Reset date filter inputs
     if (!is.null(rv$date_range)) {
+      rv$filter_programmatic_update <- TRUE
       updateDateInput(session, "date_start", value = rv$date_range$min)
       updateDateInput(session, "date_end", value = rv$date_range$max)
+      shinyjs::delay(100, { rv$filter_programmatic_update <- FALSE })
     }
+
+    # Reset filter overlay on minimap
+    session$sendCustomMessage("updateFilterRange", list(
+      isFullRange = TRUE
+    ))
 
     # Fit timeline to show all events
     fit_timeline()
+  })
+
+  # ---- Filter range minimap integration ----
+
+  # JS → R: Handle filter range changes from minimap drag
+  observeEvent(input$filter_range_from_minimap, {
+    msg <- input$filter_range_from_minimap
+
+    rv$filter_programmatic_update <- TRUE
+
+    if (isTRUE(msg$isFullRange) && !is.null(rv$date_range)) {
+      updateDateInput(session, "date_start", value = rv$date_range$min)
+      updateDateInput(session, "date_end", value = rv$date_range$max)
+    } else {
+      updateDateInput(session, "date_start", value = as.Date(msg$start))
+      updateDateInput(session, "date_end", value = as.Date(msg$end))
+    }
+
+    shinyjs::delay(100, { rv$filter_programmatic_update <- FALSE })
+  })
+
+  # R → JS: Sync date input changes to minimap filter overlay
+  observeEvent(list(input$date_start, input$date_end), {
+    # Skip if this change was triggered programmatically from minimap
+    if (isTRUE(rv$filter_programmatic_update)) return()
+    req(rv$date_range)
+
+    start <- input$date_start
+    end <- input$date_end
+    if (is.null(start) || is.null(end)) return()
+
+    # Check if dates match the full range
+    is_full_range <- (as.Date(start) <= as.Date(rv$date_range$min) &&
+                      as.Date(end) >= as.Date(rv$date_range$max))
+
+    session$sendCustomMessage("updateFilterRange", list(
+      start = as.character(start),
+      end = as.character(end),
+      isFullRange = is_full_range
+    ))
+  }, ignoreInit = TRUE)
+
+  # "Filter to View" button
+  observeEvent(input$filter_to_view, {
+    session$sendCustomMessage("filterToView", list())
+  })
+
+  # "Reset Filter" button
+  observeEvent(input$reset_date_filter, {
+    req(rv$date_range)
+
+    rv$filter_programmatic_update <- TRUE
+    updateDateInput(session, "date_start", value = rv$date_range$min)
+    updateDateInput(session, "date_end", value = rv$date_range$max)
+    shinyjs::delay(100, { rv$filter_programmatic_update <- FALSE })
+
+    # Reset filter overlay on minimap
+    session$sendCustomMessage("updateFilterRange", list(
+      isFullRange = TRUE
+    ))
+
+    # Fit timeline to show all events
+    fit_timeline()
+  })
+
+  # Render filter range label below minimap
+  output$filter_range_label <- renderUI({
+    req(rv$date_range)
+
+    start <- input$date_start
+    end <- input$date_end
+    if (is.null(start) || is.null(end)) return(NULL)
+
+    is_full_range <- (as.Date(start) <= as.Date(rv$date_range$min) &&
+                      as.Date(end) >= as.Date(rv$date_range$max))
+
+    if (is_full_range) {
+      div(
+        id = "filter-range-label",
+        style = "text-align: center; font-size: 11px; color: #95a5a6; padding: 4px 0; transition: all 0.2s ease;",
+        "Showing all events"
+      )
+    } else {
+      div(
+        id = "filter-range-label",
+        style = "text-align: center; font-size: 11px; color: #e67e22; font-weight: 500; padding: 4px 0; transition: all 0.2s ease;",
+        paste0("Filtered: ", format(as.Date(start), "%b %d, %Y"),
+               " to ", format(as.Date(end), "%b %d, %Y"))
+      )
+    }
+  })
+
+  # Reset filter range on new patient load
+  observe({
+    req(rv$date_range)
+
+    # Send reset to JS when date_range changes (new patient)
+    session$sendCustomMessage("updateFilterRange", list(
+      isFullRange = TRUE
+    ))
   })
 }

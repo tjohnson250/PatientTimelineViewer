@@ -953,6 +953,44 @@ body {
   opacity: 0.9 !important;
 }
 
+/* Filter range band */
+.filter-band {
+  transition: opacity 0.15s ease;
+}
+
+/* Filter range handles */
+.filter-handle {
+  transition: opacity 0.15s ease, fill 0.15s ease;
+}
+
+.filter-handle:hover {
+  opacity: 1.0 !important;
+  fill: #d35400;
+}
+
+/* Filter to View button - orange outline style */
+.btn-outline-warning {
+  color: #e67e22;
+  border-color: #e67e22;
+  background-color: transparent;
+}
+
+.btn-outline-warning:hover {
+  color: #fff;
+  background-color: #e67e22;
+  border-color: #e67e22;
+}
+
+.btn-outline-warning:focus,
+.btn-outline-warning.focus {
+  box-shadow: 0 0 0 0.2rem rgba(230, 126, 34, 0.25);
+}
+
+/* Filter range label below minimap */
+#filter-range-label {
+  transition: color 0.2s ease, font-weight 0.2s ease;
+}
+
 /* Progress bar for loading modal - enhanced styling */
 .loading-progress-bar {
   background: linear-gradient(90deg, #3498db 0%, #2980b9 100%) !important;

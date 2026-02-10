@@ -117,13 +117,89 @@ body {
   letter-spacing: 0.5px;
 }
 
+/* Compact merged controls panel */
+.filter-panel.compact-controls {
+  padding: 10px 15px;
+}
+
+.filter-panel.compact-controls h4 {
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.filter-panel.compact-controls .controls-row {
+  margin-bottom: 8px;
+}
+
+.filter-panel.compact-controls .controls-row:last-child {
+  margin-bottom: 0;
+}
+
+.filter-panel.compact-controls .form-group {
+  margin-bottom: 4px;
+}
+
+.filter-panel.compact-controls .radio-inline {
+  padding-top: 0;
+  margin-right: 10px;
+}
+
+.filter-panel.compact-controls .checkbox {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* Compact color legend inside merged panel */
+.filter-panel.compact-controls .source-legend {
+  margin-top: 0;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.filter-panel.compact-controls .source-legend-items {
+  gap: 8px;
+}
+
+.filter-panel.compact-controls .source-legend-item {
+  font-size: 11px;
+}
+
+.filter-panel.compact-controls .source-legend-color {
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
+}
+
+/* Inline advanced filters within compact panel */
+.advanced-filters-inline {
+  margin: 0;
+}
+
+.advanced-filters-inline .form-group {
+  margin-bottom: 8px;
+}
+
+.advanced-filters-inline label {
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Event type checkbox grid layout */
+.event-type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 2px 20px;
+  justify-content: start;
+}
+
 /* Event type checkboxes with colored indicators */
 .event-type-checkbox {
   display: inline-flex;
-  align-items: flex-start;
-  margin-right: 15px;
-  margin-bottom: 8px;
+  align-items: center;
+  margin: 0;
   gap: 6px;
+  white-space: nowrap;
 }
 
 .event-type-checkbox .color-indicator {
@@ -131,31 +207,35 @@ body {
   height: 16px;
   border-radius: 3px;
   flex-shrink: 0;
-  margin-top: 5px;
 }
 
-.event-type-checkbox .checkbox-wrapper {
-  display: flex;
-  align-items: center;
+.event-type-checkbox .checkbox-wrapper .form-group,
+.event-type-checkbox .checkbox-wrapper .checkbox,
+.event-type-checkbox .checkbox-wrapper .checkbox label {
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+  line-height: 1;
 }
 
-.event-type-checkbox .checkbox-wrapper .form-group {
-  margin-bottom: 0;
+.event-type-checkbox .checkbox-wrapper .checkbox label {
+  padding-left: 20px;
+  font-size: 14px;
+  line-height: 20px;
 }
 
-.event-type-checkbox .checkbox-wrapper .checkbox {
-  margin-top: 0;
-  margin-bottom: 0;
+.event-type-checkbox .checkbox-wrapper .checkbox label input[type="checkbox"] {
+  margin-top: 3px;
 }
 
-.color-indicator.encounters { background-color: var(--color-encounter); }
-.color-indicator.diagnoses { background-color: var(--color-diagnosis); }
-.color-indicator.procedures { background-color: var(--color-procedure); }
-.color-indicator.labs { background-color: var(--color-lab); }
-.color-indicator.prescribing { background-color: var(--color-prescribing); }
-.color-indicator.dispensing { background-color: var(--color-dispensing); }
-.color-indicator.vitals { background-color: var(--color-vital); }
-.color-indicator.conditions { background-color: var(--color-condition); }
+.color-indicator.encounters { background-color: #d4dded; border: 1px solid #a9bbdb; }
+.color-indicator.diagnoses { background-color: #f0d4d4; border: 1px solid #dba9a9; }
+.color-indicator.procedures { background-color: #ded4ed; border: 1px solid #bda9db; }
+.color-indicator.labs { background-color: #d4eddb; border: 1px solid #a9dbb8; }
+.color-indicator.prescribing { background-color: #edded4; border: 1px solid #dbbda9; }
+.color-indicator.dispensing { background-color: #ede8d4; border: 1px solid #dbd1a9; }
+.color-indicator.vitals { background-color: #d4ebed; border: 1px solid #a9d7db; }
+.color-indicator.conditions { background-color: #edd4e7; border: 1px solid #dba9cf; }
 
 /* Timeline container */
 .timeline-container {
@@ -269,154 +349,154 @@ body {
 
 /* Event type colors - lighter, more subtle */
 .vis-item.event-encounter {
-  background-color: #d4e4f7;
-  border-color: #a8c5e8;
+  background-color: #d4dded;
+  border-color: #a9bbdb;
   color: #2c3e50;
 }
 
 .vis-item.event-diagnosis {
-  background-color: #fadbd8;
-  border-color: #f5b7b1;
+  background-color: #f0d4d4;
+  border-color: #dba9a9;
   color: #2c3e50;
 }
 
 .vis-item.event-procedure {
-  background-color: #e8daef;
-  border-color: #d2b4de;
+  background-color: #ded4ed;
+  border-color: #bda9db;
   color: #2c3e50;
 }
 
 .vis-item.event-lab {
-  background-color: #d5f4e6;
-  border-color: #a9dfbf;
+  background-color: #d4eddb;
+  border-color: #a9dbb8;
   color: #2c3e50;
 }
 
 .vis-item.event-lab-abnormal {
-  background-color: #fadbd8;
+  background-color: #f0d4d4;
   border: 2px solid #e74c3c !important;
   color: #2c3e50;
 }
 
 .vis-item.event-prescribing {
-  background-color: #fae5d3;
-  border-color: #f5cba7;
+  background-color: #edded4;
+  border-color: #dbbda9;
   color: #2c3e50;
 }
 
 .vis-item.event-dispensing {
-  background-color: #fdebd0;
-  border-color: #fad7a0;
+  background-color: #ede8d4;
+  border-color: #dbd1a9;
   color: #2c3e50;
 }
 
 .vis-item.event-vital {
-  background-color: #d0ece7;
-  border-color: #a2d9ce;
+  background-color: #d4ebed;
+  border-color: #a9d7db;
   color: #2c3e50;
 }
 
 .vis-item.event-condition {
-  background-color: #f8d7da;
-  border-color: #f5c6cb;
+  background-color: #edd4e7;
+  border-color: #dba9cf;
   color: #2c3e50;
 }
 
 /* Clustered event colors - use same lighter colors as individual events */
 .vis-item.vis-cluster.event-encounter {
-  background-color: #d4e4f7;
-  border-color: #a8c5e8;
+  background-color: #d4dded;
+  border-color: #a9bbdb;
   color: #2c3e50;
 }
 
 .vis-item.vis-cluster.event-diagnosis {
-  background-color: #fadbd8;
-  border-color: #f5b7b1;
+  background-color: #f0d4d4;
+  border-color: #dba9a9;
   color: #2c3e50;
 }
 
 .vis-item.vis-cluster.event-procedure {
-  background-color: #e8daef;
-  border-color: #d2b4de;
+  background-color: #ded4ed;
+  border-color: #bda9db;
   color: #2c3e50;
 }
 
 .vis-item.vis-cluster.event-lab {
-  background-color: #d5f4e6;
-  border-color: #a9dfbf;
+  background-color: #d4eddb;
+  border-color: #a9dbb8;
   color: #2c3e50;
 }
 
 .vis-item.vis-cluster.event-prescribing {
-  background-color: #fae5d3;
-  border-color: #f5cba7;
+  background-color: #edded4;
+  border-color: #dbbda9;
   color: #2c3e50;
 }
 
 .vis-item.vis-cluster.event-dispensing {
-  background-color: #fdebd0;
-  border-color: #fad7a0;
+  background-color: #ede8d4;
+  border-color: #dbd1a9;
   color: #2c3e50;
 }
 
 .vis-item.vis-cluster.event-vital {
-  background-color: #d0ece7;
-  border-color: #a2d9ce;
+  background-color: #d4ebed;
+  border-color: #a9d7db;
   color: #2c3e50;
 }
 
 .vis-item.vis-cluster.event-condition {
-  background-color: #f8d7da;
-  border-color: #f5c6cb;
+  background-color: #edd4e7;
+  border-color: #dba9cf;
   color: #2c3e50;
 }
 
 /* Alternative: Color clusters by group (row) they appear in - also using lighter colors */
 .vis-item.vis-cluster[data-group="encounters"] {
-  background-color: #d4e4f7 !important;
-  border-color: #a8c5e8 !important;
+  background-color: #d4dded !important;
+  border-color: #a9bbdb !important;
   color: #2c3e50 !important;
 }
 
 .vis-item.vis-cluster[data-group="diagnoses"] {
-  background-color: #fadbd8 !important;
-  border-color: #f5b7b1 !important;
+  background-color: #f0d4d4 !important;
+  border-color: #dba9a9 !important;
   color: #2c3e50 !important;
 }
 
 .vis-item.vis-cluster[data-group="procedures"] {
-  background-color: #e8daef !important;
-  border-color: #d2b4de !important;
+  background-color: #ded4ed !important;
+  border-color: #bda9db !important;
   color: #2c3e50 !important;
 }
 
 .vis-item.vis-cluster[data-group="labs"] {
-  background-color: #d5f4e6 !important;
-  border-color: #a9dfbf !important;
+  background-color: #d4eddb !important;
+  border-color: #a9dbb8 !important;
   color: #2c3e50 !important;
 }
 
 .vis-item.vis-cluster[data-group="prescribing"] {
-  background-color: #fae5d3 !important;
-  border-color: #f5cba7 !important;
+  background-color: #edded4 !important;
+  border-color: #dbbda9 !important;
   color: #2c3e50 !important;
 }
 
 .vis-item.vis-cluster[data-group="dispensing"] {
-  background-color: #fdebd0 !important;
-  border-color: #fad7a0 !important;
+  background-color: #ede8d4 !important;
+  border-color: #dbd1a9 !important;
   color: #2c3e50 !important;
 }
 
 .vis-item.vis-cluster[data-group="vitals"] {
-  background-color: #d0ece7 !important;
-  border-color: #a2d9ce !important;
+  background-color: #d4ebed !important;
+  border-color: #a9d7db !important;
   color: #2c3e50 !important;
 }
 
 .vis-item.vis-cluster[data-group="conditions"] {
-  background-color: #f8d7da !important;
-  border-color: #f5c6cb !important;
+  background-color: #edd4e7 !important;
+  border-color: #dba9cf !important;
   color: #2c3e50 !important;
 }
 
@@ -788,15 +868,32 @@ body {
   display: inline-flex;
   align-items: center;
   margin-right: 15px;
-  margin-bottom: 8px;
+  margin-bottom: 0;
+  gap: 6px;
+}
+
+.source-system-checkbox .color-indicator {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  flex-shrink: 0;
 }
 
 .source-system-checkbox .checkbox {
   margin: 0;
+  padding: 0;
+  min-height: 0;
 }
 
 .source-system-checkbox .form-group {
   margin-bottom: 0;
+  padding: 0;
+}
+
+.source-system-checkbox .checkbox label {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 20px;
 }
 
 /* Source system legend */
@@ -816,15 +913,17 @@ body {
 }
 
 .source-legend-items {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 2px 12px;
+  justify-content: start;
 }
 
 .source-legend-item {
   display: inline-flex;
   align-items: center;
   font-size: 12px;
+  white-space: nowrap;
 }
 
 .source-legend-color {

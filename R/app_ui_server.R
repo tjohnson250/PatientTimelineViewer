@@ -233,101 +233,114 @@ timeline_ui <- function() {
     conditionalPanel(
       condition = "output.patient_loaded",
 
-      # Semantic filter panel
+      # Merged Display & Filters panel
       div(
-        class = "filter-panel",
-        style = "background-color: #f8f9fa; border-left: 4px solid #3498db;",
-        h4(
-          icon("magic"), " AI-Powered Filter",
-          tags$i(
-            class = "fa fa-question-circle help-icon",
-            `data-toggle` = "tooltip",
-            `data-placement` = "top",
-            title = "Ask questions in plain English like 'Show encounters with A1c > 9' or 'Show inpatient encounters from 2023'"
-          )
-        ),
+        class = "filter-panel compact-controls",
 
-        fluidRow(
-          column(9,
-            textInput(
-              "semantic_query",
-              label = NULL,
-              placeholder = "e.g., Show encounters with A1c > 9, Show only inpatient encounters, Show diagnoses containing diabetes...",
-              width = "100%"
-            )
-          ),
-          column(3,
-            div(
-              style = "display: flex; gap: 5px;",
-              actionButton(
-                "apply_semantic_filter",
-                "Apply",
-                class = "btn-primary",
-                icon = icon("search"),
-                style = "flex: 1;"
-              ),
-              actionButton(
-                "clear_semantic_filter",
-                "Clear",
-                class = "btn-secondary",
-                icon = icon("times"),
-                style = "flex: 1;"
+        h4(icon("sliders"), " Display & Filters"),
+
+        # Row 1: AI filter input + Color By dropdown
+        div(
+          class = "controls-row",
+          fluidRow(
+            style = "display: flex; align-items: flex-end;",
+            column(7,
+              div(
+                style = "display: flex; gap: 5px; align-items: flex-end;",
+                div(
+                  style = "flex: 1;",
+                  textInput(
+                    "semantic_query",
+                    label = NULL,
+                    placeholder = "AI filter: e.g., Show encounters with A1c > 9...",
+                    width = "100%"
+                  )
+                ),
+                actionButton(
+                  "apply_semantic_filter",
+                  "Apply",
+                  class = "btn-primary btn-sm",
+                  icon = icon("search"),
+                  style = "margin-bottom: 7px;"
+                ),
+                actionButton(
+                  "clear_semantic_filter",
+                  "Clear",
+                  class = "btn-secondary btn-sm",
+                  icon = icon("times"),
+                  style = "margin-bottom: 7px;"
+                ),
+                tags$i(
+                  class = "fa fa-question-circle help-icon",
+                  style = "margin-bottom: 12px;",
+                  `data-toggle` = "tooltip",
+                  `data-placement` = "top",
+                  title = "Ask questions in plain English like 'Show encounters with A1c > 9' or 'Show inpatient encounters from 2023'"
+                )
               )
+            ),
+            column(3,
+              selectInput(
+                "color_scheme",
+                label = tags$span(
+                  "Color By:",
+                  tags$i(
+                    class = "fa fa-question-circle help-icon",
+                    `data-toggle` = "tooltip",
+                    `data-placement` = "top",
+                    title = "Choose how timeline events are colored. Event Type colors events by category (encounters, diagnoses, etc.). Source System colors events by their originating EMR system."
+                  )
+                ),
+                choices = c("Event Type" = "event_type", "Source System" = "source_system"),
+                selected = "event_type"
+              )
+            ),
+            column(2,
+              uiOutput("color_legend")
             )
           )
         ),
 
-        # Status/error message area
+        # Semantic filter status + SQL (conditionally rendered)
         uiOutput("semantic_filter_status"),
-
-        # Collapsible SQL display panel
         conditionalPanel(
           condition = "output.show_generated_sql",
           tags$details(
             class = "generated-sql-panel",
-            style = "margin-top: 10px;",
+            style = "margin-top: 5px;",
             tags$summary(
-              style = "cursor: pointer; font-weight: 600; color: #7f8c8d; padding: 5px;",
+              style = "cursor: pointer; font-weight: 600; color: #7f8c8d; padding: 3px;",
               icon("code"), " View Generated SQL"
             ),
             div(
-              style = "padding: 10px; background-color: #2c3e50; color: #ecf0f1; border-radius: 4px; font-family: monospace; font-size: 12px; overflow-x: auto; margin-top: 5px;",
+              style = "padding: 8px; background-color: #2c3e50; color: #ecf0f1; border-radius: 4px; font-family: monospace; font-size: 12px; overflow-x: auto; margin-top: 3px;",
               uiOutput("generated_sql")
             )
           )
-        )
-      ),
-
-      # Display options panel
-      div(
-        class = "filter-panel",
-        h4("Display Options"),
-
-        # Event type checkboxes
-        fluidRow(
-          column(12,
-            div(
-              style = "margin-bottom: 10px;",
-              strong("Event Types:")
-            ),
-            uiOutput("event_type_checkboxes")
-          )
         ),
 
-        # Source system checkboxes (below event types)
-        fluidRow(
-          column(12,
+        # Row 2: Event types + Source systems
+        div(
+          class = "controls-row",
+          style = "border-top: 1px solid #dee2e6; padding-top: 8px;",
+          # Event type checkboxes
+          div(
+            style = "margin-bottom: 6px;",
+            uiOutput("event_type_checkboxes")
+          ),
+          # Source system checkboxes (below event types, separated)
+          div(
+            style = "padding-top: 6px; border-top: 1px solid #eee;",
             div(
-              class = "source-filter-section",
-              style = "margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;",
+              style = "display: flex; align-items: flex-start; gap: 8px; flex-wrap: wrap;",
               div(
-                style = "margin-bottom: 10px;",
-                strong("Source Systems:"),
+                style = "display: flex; align-items: center; gap: 5px; flex-shrink: 0;",
+                strong(style = "font-size: 12px; color: #7f8c8d; white-space: nowrap;", "Sources:"),
                 tags$i(
                   class = "fa fa-question-circle help-icon",
                   `data-toggle` = "tooltip",
                   `data-placement` = "top",
-                  title = "Filter events by their originating source system (EMR). Colored left borders on timeline events indicate source."
+                  title = "Filter events by their originating source system (EMR)."
                 )
               ),
               uiOutput("source_system_checkboxes")
@@ -335,148 +348,139 @@ timeline_ui <- function() {
           )
         ),
 
-        # Advanced filters (collapsible)
-        tags$details(
-          class = "advanced-filters",
-          tags$summary(
-            style = "cursor: pointer; font-weight: 600; color: #7f8c8d;",
-            icon("filter"), " Advanced Filters"
-          ),
+        # Row 3: Aggregation + Clustering + Labels + Advanced Filters trigger
+        div(
+          class = "controls-row",
+          style = "border-top: 1px solid #dee2e6; padding-top: 8px;",
+          # Inline controls row
           div(
-            style = "padding-top: 15px;",
-            fluidRow(
-              column(4,
-                textInput(
-                  "dx_pattern",
-                  "Diagnosis Code (SQL LIKE):",
-                  placeholder = "e.g., E11%"
-                )
-              ),
-              column(4,
-                textInput(
-                  "px_pattern",
-                  "Procedure Code (SQL LIKE):",
-                  placeholder = "e.g., 99%"
-                )
-              ),
-              column(4,
-                textInput(
-                  "lab_name",
-                  "Lab Name (partial match):",
-                  placeholder = "e.g., glucose"
-                )
+            style = "display: flex; align-items: center; flex-wrap: wrap; gap: 10px;",
+            # Aggregation radio buttons
+            div(
+              style = "flex-shrink: 0;",
+              radioButtons(
+                "aggregation",
+                label = tags$span(
+                  "Aggregation:",
+                  tags$i(
+                    class = "fa fa-question-circle help-icon",
+                    `data-toggle` = "tooltip",
+                    `data-placement` = "top",
+                    title = "Individual shows every event separately, Daily combines by date, Weekly groups by ISO week."
+                  )
+                ),
+                choices = c(
+                  "Individual" = "individual",
+                  "Daily" = "daily",
+                  "Weekly" = "weekly"
+                ),
+                selected = "daily",
+                inline = TRUE
               )
             ),
-            fluidRow(
-              column(4,
-                textInput(
-                  "med_name",
-                  "Medication Name (partial match):",
-                  placeholder = "e.g., metformin"
+            # Vertical divider
+            div(style = "width: 1px; background-color: #dee2e6; align-self: stretch; min-height: 24px; flex-shrink: 0;"),
+            # Clustering checkbox
+            div(
+              style = "flex-shrink: 0;",
+              checkboxInput(
+                "enable_clustering",
+                label = tags$span(
+                  "Enable auto-clustering",
+                  tags$i(
+                    class = "fa fa-question-circle help-icon",
+                    `data-toggle` = "tooltip",
+                    `data-placement` = "top",
+                    title = "Dynamically aggregates events as you zoom in and out of the timeline for better performance with large datasets."
+                  )
+                ),
+                value = TRUE
+              )
+            ),
+            # Labels checkbox
+            div(
+              style = "flex-shrink: 0;",
+              checkboxInput(
+                "show_labels",
+                label = tags$span(
+                  "Show event labels",
+                  tags$i(
+                    class = "fa fa-question-circle help-icon",
+                    `data-toggle` = "tooltip",
+                    `data-placement` = "top",
+                    title = "Toggle text labels on timeline events. Hiding labels makes point events more compact."
+                  )
+                ),
+                value = TRUE
+              )
+            ),
+            # Vertical divider
+            div(style = "width: 1px; background-color: #dee2e6; align-self: stretch; min-height: 24px; flex-shrink: 0;"),
+            # Advanced Filters summary trigger (inline)
+            tags$span(
+              style = "cursor: pointer; font-weight: 600; color: #7f8c8d; font-size: 13px;",
+              onclick = "var d = document.getElementById('advanced-filters-detail'); d.open = !d.open;",
+              icon("filter"), " Advanced Filters"
+            )
+          ),
+          # Advanced Filters content (full-width below the inline row)
+          tags$details(
+            id = "advanced-filters-detail",
+            class = "advanced-filters-inline",
+            style = "margin-top: 8px;",
+            tags$summary(style = "display: none;"),
+            div(
+              style = "padding-top: 5px;",
+              fluidRow(
+                column(4,
+                  textInput(
+                    "dx_pattern",
+                    "Diagnosis Code (SQL LIKE):",
+                    placeholder = "e.g., E11%"
+                  )
+                ),
+                column(4,
+                  textInput(
+                    "px_pattern",
+                    "Procedure Code (SQL LIKE):",
+                    placeholder = "e.g., 99%"
+                  )
+                ),
+                column(4,
+                  textInput(
+                    "lab_name",
+                    "Lab Name (partial match):",
+                    placeholder = "e.g., glucose"
+                  )
                 )
               ),
-              column(4,
-                selectInput(
-                  "enc_type_filter",
-                  "Encounter Type:",
-                  choices = c("All" = "ALL"),
-                  multiple = TRUE
-                )
-              ),
-              column(4,
-                actionButton(
-                  "clear_filters",
-                  "Clear Filters",
-                  class = "btn-secondary",
-                  icon = icon("times"),
-                  style = "margin-top: 25px;"
+              fluidRow(
+                column(4,
+                  textInput(
+                    "med_name",
+                    "Medication Name (partial match):",
+                    placeholder = "e.g., metformin"
+                  )
+                ),
+                column(4,
+                  selectInput(
+                    "enc_type_filter",
+                    "Encounter Type:",
+                    choices = c("All" = "ALL"),
+                    multiple = TRUE
+                  )
+                ),
+                column(4,
+                  actionButton(
+                    "clear_filters",
+                    "Clear Filters",
+                    class = "btn-secondary btn-sm",
+                    icon = icon("times"),
+                    style = "margin-top: 25px;"
+                  )
                 )
               )
             )
-          )
-        ),
-
-        # Aggregation and clustering controls
-        fluidRow(
-          style = "margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;",
-          column(6,
-            radioButtons(
-              "aggregation",
-              label = tags$span(
-                "Aggregation:",
-                tags$i(
-                  class = "fa fa-question-circle help-icon",
-                  `data-toggle` = "tooltip",
-                  `data-placement` = "top",
-                  title = "Aggregates events before creating the timeline. Individual shows every event separately, Daily combines events of the same type on the same date, Weekly groups by ISO week."
-                )
-              ),
-              choices = c(
-                "Individual" = "individual",
-                "Daily" = "daily",
-                "Weekly" = "weekly"
-              ),
-              selected = "daily",
-              inline = TRUE
-            )
-          ),
-          column(3,
-            checkboxInput(
-              "enable_clustering",
-              label = tags$span(
-                "Enable auto-clustering",
-                tags$i(
-                  class = "fa fa-question-circle help-icon",
-                  `data-toggle` = "tooltip",
-                  `data-placement` = "top",
-                  title = "Dynamically aggregates events as you zoom in and out of the timeline for better performance with large datasets."
-                )
-              ),
-              value = TRUE
-            )
-          ),
-          column(3,
-            checkboxInput(
-              "show_labels",
-              label = tags$span(
-                "Show event labels",
-                tags$i(
-                  class = "fa fa-question-circle help-icon",
-                  `data-toggle` = "tooltip",
-                  `data-placement` = "top",
-                  title = "Toggle text labels on timeline events. Hiding labels makes point events more compact."
-                )
-              ),
-              value = TRUE
-            )
-          )
-        )
-      ),
-
-      # Color scheme selector (positioned between display options and timeline)
-      div(
-        class = "filter-panel",
-        style = "padding: 10px 15px;",
-        fluidRow(
-          column(4,
-            selectInput(
-              "color_scheme",
-              label = tags$span(
-                "Color By:",
-                tags$i(
-                  class = "fa fa-question-circle help-icon",
-                  `data-toggle` = "tooltip",
-                  `data-placement` = "top",
-                  title = "Choose how timeline events are colored. Event Type colors events by category (encounters, diagnoses, etc.). Source System colors events by their originating EMR system."
-                )
-              ),
-              choices = c("Event Type" = "event_type", "Source System" = "source_system"),
-              selected = "event_type"
-            )
-          ),
-          column(8,
-            # Legend will be rendered here based on color scheme
-            uiOutput("color_legend")
           )
         )
       ),
@@ -968,7 +972,7 @@ timeline_server <- function(input, output, session) {
       )
     })
 
-    div(style = "display: flex; flex-wrap: wrap;", checkboxes)
+    div(class = "event-type-grid", checkboxes)
   })
 
   # Get selected event types
@@ -1028,9 +1032,14 @@ timeline_server <- function(input, output, session) {
     checkboxes <- lapply(1:nrow(sources), function(i) {
       src <- sources[i, ]
       input_id <- paste0("show_source_", gsub("[^A-Za-z0-9]", "_", src$source_code))
+      color_idx <- ((i - 1) %% length(source_colors)) + 1
 
       tags$div(
         class = "source-system-checkbox",
+        tags$span(
+          class = "color-indicator",
+          style = sprintf("background-color: %s;", source_colors[color_idx])
+        ),
         checkboxInput(
           inputId = input_id,
           label = src$display_label,
@@ -1090,34 +1099,8 @@ timeline_server <- function(input, output, session) {
     scheme <- input$color_scheme
 
     if (is.null(scheme) || scheme == "event_type") {
-      # Event type legend - show colored squares for each event type
-      event_types <- list(
-        list(name = "Encounters", color = "#d4e4f7", border = "#a8c5e8"),
-        list(name = "Diagnoses", color = "#fadbd8", border = "#f5b7b1"),
-        list(name = "Procedures", color = "#e8daef", border = "#d2b4de"),
-        list(name = "Labs", color = "#d5f4e6", border = "#a9dfbf"),
-        list(name = "Prescribing", color = "#fae5d3", border = "#f5cba7"),
-        list(name = "Dispensing", color = "#fdebd0", border = "#fad7a0"),
-        list(name = "Vitals", color = "#d0ece7", border = "#a2d9ce"),
-        list(name = "Conditions", color = "#f8d7da", border = "#f5c6cb")
-      )
-
-      legend_items <- lapply(event_types, function(et) {
-        tags$span(
-          class = "source-legend-item",
-          tags$span(
-            class = "source-legend-color",
-            style = sprintf("background-color: %s; border: 1px solid %s;", et$color, et$border)
-          ),
-          et$name
-        )
-      })
-
-      div(
-        class = "source-legend",
-        tags$span(class = "source-legend-title", "Event Types: "),
-        div(class = "source-legend-items", legend_items)
-      )
+      # Event type legend not needed — color indicators on checkboxes serve as legend
+      return(NULL)
     } else {
       # Source system legend - show colored squares for each source
       sources <- get_source_systems(rv$patient_data)
@@ -1217,14 +1200,14 @@ timeline_server <- function(input, output, session) {
 
     # Define color palettes
     event_colors <- list(
-      encounter = list(bg = "#d4e4f7", border = "#a8c5e8"),
-      diagnosis = list(bg = "#fadbd8", border = "#f5b7b1"),
-      procedure = list(bg = "#e8daef", border = "#d2b4de"),
-      lab = list(bg = "#d5f4e6", border = "#a9dfbf"),
-      prescribing = list(bg = "#fae5d3", border = "#f5cba7"),
-      dispensing = list(bg = "#fdebd0", border = "#fad7a0"),
-      vital = list(bg = "#d0ece7", border = "#a2d9ce"),
-      condition = list(bg = "#f8d7da", border = "#f5c6cb"),
+      encounter = list(bg = "#d4dded", border = "#a9bbdb"),
+      diagnosis = list(bg = "#f0d4d4", border = "#dba9a9"),
+      procedure = list(bg = "#ded4ed", border = "#bda9db"),
+      lab = list(bg = "#d4eddb", border = "#a9dbb8"),
+      prescribing = list(bg = "#edded4", border = "#dbbda9"),
+      dispensing = list(bg = "#ede8d4", border = "#dbd1a9"),
+      vital = list(bg = "#d4ebed", border = "#a9d7db"),
+      condition = list(bg = "#edd4e7", border = "#dba9cf"),
       death = list(bg = "#d5d8dc", border = "#85929e")
     )
 

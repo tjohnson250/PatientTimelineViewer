@@ -269,154 +269,154 @@ body {
 
 /* Event type colors - lighter, more subtle */
 .vis-item.event-encounter {
-  background-color: #d4e4f7;
-  border-color: #a8c5e8;
+  background-color: #d4dded;
+  border-color: #a9bbdb;
   color: #2c3e50;
 }
 
 .vis-item.event-diagnosis {
-  background-color: #fadbd8;
-  border-color: #f5b7b1;
+  background-color: #f0d4d4;
+  border-color: #dba9a9;
   color: #2c3e50;
 }
 
 .vis-item.event-procedure {
-  background-color: #e8daef;
-  border-color: #d2b4de;
+  background-color: #ded4ed;
+  border-color: #bda9db;
   color: #2c3e50;
 }
 
 .vis-item.event-lab {
-  background-color: #d5f4e6;
-  border-color: #a9dfbf;
+  background-color: #d4eddb;
+  border-color: #a9dbb8;
   color: #2c3e50;
 }
 
 .vis-item.event-lab-abnormal {
-  background-color: #fadbd8;
+  background-color: #f0d4d4;
   border: 2px solid #e74c3c !important;
   color: #2c3e50;
 }
 
 .vis-item.event-prescribing {
-  background-color: #fae5d3;
-  border-color: #f5cba7;
+  background-color: #edded4;
+  border-color: #dbbda9;
   color: #2c3e50;
 }
 
 .vis-item.event-dispensing {
-  background-color: #fdebd0;
-  border-color: #fad7a0;
+  background-color: #ede8d4;
+  border-color: #dbd1a9;
   color: #2c3e50;
 }
 
 .vis-item.event-vital {
-  background-color: #d0ece7;
-  border-color: #a2d9ce;
+  background-color: #d4ebed;
+  border-color: #a9d7db;
   color: #2c3e50;
 }
 
 .vis-item.event-condition {
-  background-color: #f8d7da;
-  border-color: #f5c6cb;
+  background-color: #edd4e7;
+  border-color: #dba9cf;
   color: #2c3e50;
 }
 
 /* Clustered event colors - use same lighter colors as individual events */
 .vis-item.vis-cluster.event-encounter {
-  background-color: #d4e4f7;
-  border-color: #a8c5e8;
+  background-color: #d4dded;
+  border-color: #a9bbdb;
   color: #2c3e50;
 }
 
 .vis-item.vis-cluster.event-diagnosis {
-  background-color: #fadbd8;
-  border-color: #f5b7b1;
+  background-color: #f0d4d4;
+  border-color: #dba9a9;
   color: #2c3e50;
 }
 
 .vis-item.vis-cluster.event-procedure {
-  background-color: #e8daef;
-  border-color: #d2b4de;
+  background-color: #ded4ed;
+  border-color: #bda9db;
   color: #2c3e50;
 }
 
 .vis-item.vis-cluster.event-lab {
-  background-color: #d5f4e6;
-  border-color: #a9dfbf;
+  background-color: #d4eddb;
+  border-color: #a9dbb8;
   color: #2c3e50;
 }
 
 .vis-item.vis-cluster.event-prescribing {
-  background-color: #fae5d3;
-  border-color: #f5cba7;
+  background-color: #edded4;
+  border-color: #dbbda9;
   color: #2c3e50;
 }
 
 .vis-item.vis-cluster.event-dispensing {
-  background-color: #fdebd0;
-  border-color: #fad7a0;
+  background-color: #ede8d4;
+  border-color: #dbd1a9;
   color: #2c3e50;
 }
 
 .vis-item.vis-cluster.event-vital {
-  background-color: #d0ece7;
-  border-color: #a2d9ce;
+  background-color: #d4ebed;
+  border-color: #a9d7db;
   color: #2c3e50;
 }
 
 .vis-item.vis-cluster.event-condition {
-  background-color: #f8d7da;
-  border-color: #f5c6cb;
+  background-color: #edd4e7;
+  border-color: #dba9cf;
   color: #2c3e50;
 }
 
 /* Alternative: Color clusters by group (row) they appear in - also using lighter colors */
 .vis-item.vis-cluster[data-group="encounters"] {
-  background-color: #d4e4f7 !important;
-  border-color: #a8c5e8 !important;
+  background-color: #d4dded !important;
+  border-color: #a9bbdb !important;
   color: #2c3e50 !important;
 }
 
 .vis-item.vis-cluster[data-group="diagnoses"] {
-  background-color: #fadbd8 !important;
-  border-color: #f5b7b1 !important;
+  background-color: #f0d4d4 !important;
+  border-color: #dba9a9 !important;
   color: #2c3e50 !important;
 }
 
 .vis-item.vis-cluster[data-group="procedures"] {
-  background-color: #e8daef !important;
-  border-color: #d2b4de !important;
+  background-color: #ded4ed !important;
+  border-color: #bda9db !important;
   color: #2c3e50 !important;
 }
 
 .vis-item.vis-cluster[data-group="labs"] {
-  background-color: #d5f4e6 !important;
-  border-color: #a9dfbf !important;
+  background-color: #d4eddb !important;
+  border-color: #a9dbb8 !important;
   color: #2c3e50 !important;
 }
 
 .vis-item.vis-cluster[data-group="prescribing"] {
-  background-color: #fae5d3 !important;
-  border-color: #f5cba7 !important;
+  background-color: #edded4 !important;
+  border-color: #dbbda9 !important;
   color: #2c3e50 !important;
 }
 
 .vis-item.vis-cluster[data-group="dispensing"] {
-  background-color: #fdebd0 !important;
-  border-color: #fad7a0 !important;
+  background-color: #ede8d4 !important;
+  border-color: #dbd1a9 !important;
   color: #2c3e50 !important;
 }
 
 .vis-item.vis-cluster[data-group="vitals"] {
-  background-color: #d0ece7 !important;
-  border-color: #a2d9ce !important;
+  background-color: #d4ebed !important;
+  border-color: #a9d7db !important;
   color: #2c3e50 !important;
 }
 
 .vis-item.vis-cluster[data-group="conditions"] {
-  background-color: #f8d7da !important;
-  border-color: #f5c6cb !important;
+  background-color: #edd4e7 !important;
+  border-color: #dba9cf !important;
   color: #2c3e50 !important;
 }
 

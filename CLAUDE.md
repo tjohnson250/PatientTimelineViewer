@@ -184,17 +184,19 @@ Additionally, from MasterPatientIndex database:
 
 ## Event Type Color Scheme
 
-Colors are defined in `www/custom.css` and should remain consistent:
+Colors use a muted 8-hue palette with hues spaced ~45° apart for maximum distinguishability. Each event type has a pastel background and a slightly darker border, defined in `www/custom.css`, `R/app_ui_server.R` (inline styles in `filtered_events()`), and `inst/example/www/custom.css`:
 
-- Encounters: #3498db (Blue)
-- Diagnoses: #e74c3c (Coral)
-- Procedures: #9b59b6 (Purple)
-- Labs: #27ae60 (Green)
-- Prescribing: #e67e22 (Orange)
-- Dispensing: #f39c12 (Amber)
-- Vitals: #1abc9c (Teal)
-- Conditions: #e91e63 (Pink)
-- Death: #2c3e50 (Dark Gray)
+- Encounters: bg #d4dded / border #a9bbdb (Blue, 220°)
+- Diagnoses: bg #f0d4d4 / border #dba9a9 (Red, 0°)
+- Procedures: bg #ded4ed / border #bda9db (Purple, 280°)
+- Labs: bg #d4eddb / border #a9dbb8 (Green, 140°)
+- Prescribing: bg #edded4 / border #dbbda9 (Orange, 30°)
+- Dispensing: bg #ede8d4 / border #dbd1a9 (Gold, 55°)
+- Vitals: bg #d4ebed / border #a9d7db (Cyan, 190°)
+- Conditions: bg #edd4e7 / border #dba9cf (Magenta, 325°)
+- Death: bg #d5d8dc / border #85929e (Gray)
+
+When modifying colors, update all three locations: CSS (indicators, event items, cluster items, data-group selectors), R inline styles, and the example CSS.
 
 ## Special Features
 
@@ -213,13 +215,23 @@ A miniature representation of the full timeline displayed below the main timelin
 - **Orange filter range handles**: Drag to set the date range filter; changes sync bidirectionally with the date inputs
 - Implementation in `www/timeline-overview.js` with server-side support in `app_ui_server.R`
 
+### Compact Display & Filters Panel
+
+All display controls are consolidated into a single "Display & Filters" panel (previously three separate panels: AI Filter, Display Options, Color Scheme). The panel has three rows:
+
+1. **Row 1**: AI filter text input + Apply/Clear buttons + Color By dropdown
+2. **Row 2**: Event type checkboxes (3-column CSS grid with colored indicator squares) + Source system checkboxes (with colored indicator squares matching left-border colors)
+3. **Row 3**: Aggregation radio buttons + Enable auto-clustering + Show event labels + collapsible Advanced Filters
+
+The event type checkboxes double as the color legend — colored squares on each checkbox match the timeline event colors. A separate legend is only shown when Color By is set to "Source System".
+
 ### Event Label Toggle
 
-A "Show event labels" checkbox in Display Options controls whether text labels appear on timeline markers. When unchecked, a `hide-labels` CSS class is applied and point events shrink to 6px dots. Uses DataSet update to force vis.js to remeasure items after toggling.
+A "Show event labels" checkbox controls whether text labels appear on timeline markers. When unchecked, a `hide-labels` CSS class is applied and point events shrink to 6px dots. Uses DataSet update to force vis.js to remeasure items after toggling.
 
 ### Color Scheme Selector
 
-Toggle between "Event Type" (default) and "Source System" coloring via a dropdown. Source system colors use a palette of 8 distinct colors with CSS left-border indicators. Source system information comes from the MPI database when available.
+Toggle between "Event Type" (default) and "Source System" coloring via a dropdown in the Display & Filters panel. Source system colors use a palette of 8 distinct colors with CSS left-border indicators. Source system checkboxes display colored indicator squares matching these border colors. Source system information comes from the MPI database when available.
 
 ### Related Events for Encounters
 
@@ -262,8 +274,10 @@ To add a new PCORnet table type:
 5. **R/filter_helpers.R**: Add to `get_event_type_counts()`
 6. **R/app_ui_server.R**: Add checkbox to UI in `output$event_type_checkboxes`
 7. **R/app_ui_server.R**: Add to `get_selected_event_types()` reactive
-8. **www/custom.css**: Define color class
-9. **R/app_ui_server.R**: Add event detail rendering in `output$event_details`
+8. **R/app_ui_server.R**: Add to `event_colors` list in `filtered_events()` reactive
+9. **www/custom.css**: Define color classes (`.color-indicator`, `.vis-item.event-*`, `.vis-item.vis-cluster.event-*`, `.vis-item.vis-cluster[data-group="*"]`)
+10. **inst/example/www/custom.css**: Mirror the same color classes
+11. **R/app_ui_server.R**: Add event detail rendering in `output$event_details`
 
 ## Testing with DuckDB
 

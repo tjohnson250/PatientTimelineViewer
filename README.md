@@ -144,6 +144,7 @@ shiny::runApp()
 -   **PATID Autocomplete**: Type-ahead search with debounced input - start typing a PATID (min 2 characters) to see matching patients with DOB/sex details
 -   **ICD Code Descriptions**: Automatic lookup of ICD-10-CM and ICD-9-CM code descriptions on diagnosis events using the `icd.data` package
 -   **AI-Powered Semantic Filtering** (Optional): Use natural language queries like "Show statins" or "Show encounters with A1c > 9" to filter patient data
+-   **Compact Display & Filters Panel**: All controls consolidated into a single panel — AI filter, event type checkboxes, source system checkboxes, color scheme, aggregation, clustering, labels, and advanced filters
 -   **Aggregation Options**: View events individually, aggregated by day, or by week
 -   **Automatic Clustering**: Automatically cluster events as you zoom in and out of the timeline
 -   **Color Scheme Selector**: Toggle between coloring events by Event Type or by Source System
@@ -159,17 +160,19 @@ shiny::runApp()
 
 ## Event Type Color Scheme
 
-| Event Type  | Color     | Hex     |
-|-------------|-----------|---------|
-| Encounters  | Blue      | #3498db |
-| Diagnoses   | Coral     | #e74c3c |
-| Procedures  | Purple    | #9b59b6 |
-| Labs        | Green     | #27ae60 |
-| Prescribing | Orange    | #e67e22 |
-| Dispensing  | Amber     | #f39c12 |
-| Vitals      | Teal      | #1abc9c |
-| Conditions  | Pink      | #e91e63 |
-| Death       | Dark Gray | #2c3e50 |
+Events use a muted 8-hue palette with hues spaced ~45° apart for maximum distinguishability:
+
+| Event Type  | Hue       | Background | Border  |
+|-------------|-----------|------------|---------|
+| Encounters  | Blue      | #d4dded    | #a9bbdb |
+| Diagnoses   | Red       | #f0d4d4    | #dba9a9 |
+| Procedures  | Purple    | #ded4ed    | #bda9db |
+| Labs        | Green     | #d4eddb    | #a9dbb8 |
+| Prescribing | Orange    | #edded4    | #dbbda9 |
+| Dispensing  | Gold      | #ede8d4    | #dbd1a9 |
+| Vitals      | Cyan      | #d4ebed    | #a9d7db |
+| Conditions  | Magenta   | #edd4e7    | #dba9cf |
+| Death       | Gray      | #d5d8dc    | #85929e |
 
 ## Requirements
 
@@ -346,7 +349,7 @@ model = "claude-sonnet-4-20250514",  # Change this line
 
 ### Usage
 
-Once configured, you'll see an "AI-Powered Filter" panel at the top of the application. Enter natural language queries like:
+Once configured, the AI filter input appears in the "Display & Filters" panel at the top row. Enter natural language queries like:
 
 -   "Show statins"
 -   "Show encounters with A1c \> 9"
@@ -524,12 +527,15 @@ Access via the expandable "Advanced Filters" section:
 -   **Medication Name**: Partial text match
 -   **Encounter Type**: Filter by IP, ED, AV, etc.
 
-## Display Options
+## Display & Filters Panel
 
--   **Color By**: Choose between "Event Type" (default) and "Source System" color schemes
--   **Show Event Labels**: Toggle text labels on timeline markers on/off; when off, point events appear as compact dots
--   **Aggregation**: Switch between Individual, Daily, and Weekly event grouping
--   **Auto-Clustering**: Enable/disable automatic event clustering based on zoom level
+All display controls are consolidated into a single compact panel with three rows:
+
+-   **Row 1**: AI filter input with Apply/Clear buttons, Color By dropdown (Event Type or Source System)
+-   **Row 2**: Event type checkboxes (3-column grid with colored indicator squares), Source system checkboxes (with colored indicator squares matching left-border colors)
+-   **Row 3**: Aggregation (Individual/Daily/Weekly), auto-clustering toggle, event label toggle, collapsible Advanced Filters
+
+The colored squares on event type checkboxes serve as the color legend. A separate legend is only shown when Color By is set to "Source System".
 
 ## Notes
 

@@ -399,7 +399,7 @@ timeline_ui <- function() {
         # Aggregation and clustering controls
         fluidRow(
           style = "margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;",
-          column(8,
+          column(6,
             radioButtons(
               "aggregation",
               label = tags$span(
@@ -420,7 +420,7 @@ timeline_ui <- function() {
               inline = TRUE
             )
           ),
-          column(4,
+          column(3,
             checkboxInput(
               "enable_clustering",
               label = tags$span(
@@ -430,6 +430,21 @@ timeline_ui <- function() {
                   `data-toggle` = "tooltip",
                   `data-placement` = "top",
                   title = "Dynamically aggregates events as you zoom in and out of the timeline for better performance with large datasets."
+                )
+              ),
+              value = TRUE
+            )
+          ),
+          column(3,
+            checkboxInput(
+              "show_labels",
+              label = tags$span(
+                "Show event labels",
+                tags$i(
+                  class = "fa fa-question-circle help-icon",
+                  `data-toggle` = "tooltip",
+                  `data-placement` = "top",
+                  title = "Toggle text labels on timeline events. Hiding labels makes point events more compact."
                 )
               ),
               value = TRUE
@@ -1026,6 +1041,35 @@ timeline_server <- function(input, output, session) {
     })
 
     div(style = "display: flex; flex-wrap: wrap; gap: 10px;", checkboxes)
+  })
+
+  # Observer for show/hide event labels
+  observe({
+    if (!is.null(input$show_labels)) {
+      if (isTRUE(input$show_labels)) {
+        shinyjs::runjs("
+          document.getElementById('timeline-wrapper').classList.remove('hide-labels');
+          setTimeout(function() {
+            var w = HTMLWidgets.find('#timeline');
+            if (w && w.timeline) {
+              var ds = w.timeline.itemsData;
+              if (ds) ds.update(ds.get());
+            }
+          }, 50);
+        ")
+      } else {
+        shinyjs::runjs("
+          document.getElementById('timeline-wrapper').classList.add('hide-labels');
+          setTimeout(function() {
+            var w = HTMLWidgets.find('#timeline');
+            if (w && w.timeline) {
+              var ds = w.timeline.itemsData;
+              if (ds) ds.update(ds.get());
+            }
+          }, 50);
+        ")
+      }
+    }
   })
 
   # Observer for color scheme body class

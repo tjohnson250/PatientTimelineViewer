@@ -202,20 +202,48 @@ class TimelineEventEntity: Entity, HasModel, HasCollision {
 
     @MainActor
     private func addIcon(for event: TimelineEvent) {
-        // Icons are represented by small colored shapes that indicate the event type
-        // The shape already conveys type through color, so we keep icons subtle
         guard event.isAbnormal else { return }
 
-        // Add abnormal indicator (red ring)
-        let ringMesh = MeshResource.generateBox(size: SIMD3<Float>(0.05, 0.002, 0.05), cornerRadius: 0.025)
-        var ringMaterial = UnlitMaterial()
-        ringMaterial.color = .init(tint: UIColor(TimelineColors.abnormalIndicator))
+        guard let triangleMesh = Self.makeTriangleMesh(size: 0.01) else { return }
+        var material = UnlitMaterial()
+        material.color = .init(tint: UIColor(TimelineColors.abnormalIndicator))
 
-        let ringEntity = Entity()
-        ringEntity.components.set(ModelComponent(mesh: ringMesh, materials: [ringMaterial]))
-        ringEntity.position = SIMD3<Float>(0, -0.03, 0)
+        let sphereRadius: Float = 0.02
+        let offset: Float = sphereRadius + 0.001
 
-        self.addChild(ringEntity)
+        // Place triangles at 6 positions: 4 on equator + top + bottom
+        let placements: [(SIMD3<Float>, simd_quatf)] = [
+            (SIMD3<Float>(offset, 0, 0),  simd_quatf(angle: -.pi / 2, axis: SIMD3<Float>(0, 1, 0))),
+            (SIMD3<Float>(0, 0, offset),  simd_quatf(angle: 0, axis: SIMD3<Float>(0, 1, 0))),
+            (SIMD3<Float>(-offset, 0, 0), simd_quatf(angle: .pi / 2, axis: SIMD3<Float>(0, 1, 0))),
+            (SIMD3<Float>(0, 0, -offset), simd_quatf(angle: .pi, axis: SIMD3<Float>(0, 1, 0))),
+            (SIMD3<Float>(0, offset, 0),  simd_quatf(angle: -.pi / 2, axis: SIMD3<Float>(1, 0, 0))),
+            (SIMD3<Float>(0, -offset, 0), simd_quatf(angle: .pi / 2, axis: SIMD3<Float>(1, 0, 0)))
+        ]
+
+        for (position, rotation) in placements {
+            let tri = Entity()
+            tri.components.set(ModelComponent(mesh: triangleMesh, materials: [material]))
+            tri.position = position
+            tri.orientation = rotation
+            self.addChild(tri)
+        }
+    }
+
+    /// Generate a double-sided equilateral triangle mesh in the XY plane (normal along Z)
+    private static func makeTriangleMesh(size: Float) -> MeshResource? {
+        let half = size / 2
+        let h = size * 0.866 // sqrt(3)/2
+
+        var descr = MeshDescriptor(name: "abnormalTriangle")
+        descr.positions = MeshBuffer([
+            SIMD3<Float>(0, h * 2 / 3, 0),      // top vertex
+            SIMD3<Float>(-half, -h / 3, 0),      // bottom-left
+            SIMD3<Float>(half, -h / 3, 0)        // bottom-right
+        ])
+        descr.primitives = .triangles([0, 1, 2, 0, 2, 1]) // front + back face
+
+        return try? MeshResource.generate(from: [descr])
     }
 
     @MainActor

@@ -88,7 +88,7 @@ class TimelineEventEntity: Entity, HasModel, HasCollision {
         let eventType = event.eventType
 
         // Point events are spheres
-        let radius: Float = event.isAbnormal ? 0.025 : 0.02
+        let radius: Float = 0.02
         let mesh = MeshResource.generateSphere(radius: radius)
         let material = TimelineColors.simpleMaterial(for: eventType)
         self.model = ModelComponent(mesh: mesh, materials: [material])
@@ -146,7 +146,7 @@ class TimelineEventEntity: Entity, HasModel, HasCollision {
             segmentEntity.position = SIMD3<Float>(midX, 0, midZ)
 
             // Rotate to align with arc direction
-            let segmentAngle = atan2(z2 - z1, x2 - x1)
+            let segmentAngle = atan2(x2 - x1, z2 - z1)
             segmentEntity.orientation = simd_quatf(angle: segmentAngle, axis: SIMD3<Float>(0, 1, 0))
 
             self.addChild(segmentEntity)

@@ -183,7 +183,7 @@ struct TimelineControlsView: View {
             Button(action: {
                 appModel.resetFilters()
                 appModel.timelineRadius = 2.0
-                appModel.timelineHeight = 0.0
+                appModel.timelineHeight = 1.2
             }) {
                 Label("Reset View", systemImage: "arrow.counterclockwise")
             }

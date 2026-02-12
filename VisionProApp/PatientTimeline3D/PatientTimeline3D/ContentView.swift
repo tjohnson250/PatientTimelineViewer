@@ -115,7 +115,7 @@ struct ContentView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Vertical Position")
                             .font(.caption)
-                        Slider(value: $appModel.timelineHeight, in: -0.5...0.5, step: 0.1)
+                        Slider(value: $appModel.timelineHeight, in: 0.5...2.0, step: 0.1)
                     }
                 }
             }

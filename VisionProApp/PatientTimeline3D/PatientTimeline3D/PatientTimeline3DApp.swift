@@ -43,7 +43,7 @@ class AppModel: ObservableObject {
 
     // 3D layout settings
     @Published var timelineRadius: Float = 2.0  // Distance from user
-    @Published var timelineHeight: Float = 0.0  // Vertical offset
+    @Published var timelineHeight: Float = 1.2  // Vertical offset
     @Published var eventSpacing: Float = 0.1    // Space between events
 
     private let dataService = PatientDataService()

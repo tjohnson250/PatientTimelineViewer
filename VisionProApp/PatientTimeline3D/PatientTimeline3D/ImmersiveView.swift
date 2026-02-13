@@ -106,8 +106,7 @@ struct ImmersiveView: View {
                 let endAngle = calculateAngle(for: endDate, in: dateRange)
 
                 // Calculate radius and height based on event type
-                let typeOffset = Float(event.eventType.groupIndex) * 0.15
-                let radius = appModel.timelineRadius + typeOffset
+                let radius = appModel.timelineRadius
                 let heightPerGroup: Float = 0.08
                 let height = Float(event.eventType.groupIndex) * heightPerGroup - 0.3 + appModel.timelineHeight
 
@@ -156,8 +155,7 @@ struct ImmersiveView: View {
                 let startAngle = calculateAngle(for: event.startDate, in: dateRange)
                 let endAngle = calculateAngle(for: endDate, in: dateRange)
 
-                let typeOffset = Float(event.eventType.groupIndex) * 0.15
-                let radius = appModel.timelineRadius + typeOffset
+                let radius = appModel.timelineRadius
                 let heightPerGroup: Float = 0.08
                 let height = Float(event.eventType.groupIndex) * heightPerGroup - 0.3 + appModel.timelineHeight
 
@@ -227,9 +225,8 @@ struct ImmersiveView: View {
     private func calculatePosition(for event: TimelineEvent, in dateRange: ClosedRange<Date>) -> TimelinePosition {
         let angle = calculateAngle(for: event.startDate, in: dateRange)
 
-        // Calculate radius based on event type (inner to outer rings)
-        let typeOffset = Float(event.eventType.groupIndex) * 0.15
-        let radius = appModel.timelineRadius + typeOffset
+        // All events share the same cylinder radius
+        let radius = appModel.timelineRadius
 
         // Calculate height based on event type (stacked layers)
         let heightPerGroup: Float = 0.08

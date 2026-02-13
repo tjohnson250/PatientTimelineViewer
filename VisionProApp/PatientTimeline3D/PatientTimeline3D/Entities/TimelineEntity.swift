@@ -16,6 +16,9 @@ class TimelineEventEntity: Entity, HasModel, HasCollision {
     /// Radius from center (stored for arc rendering)
     var arcRadius: Float = 2.0
 
+    /// Depth index for overlapping point events (0 = front, 1+ = behind)
+    var depthIndex: Int = 0
+
     /// Whether this entity is currently selected
     var isSelected: Bool = false {
         didSet {

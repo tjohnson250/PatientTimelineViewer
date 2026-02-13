@@ -97,6 +97,8 @@ struct ImmersiveView: View {
 
     @MainActor
     private func addEventEntities(to root: Entity, dateRange: ClosedRange<Date>) async {
+        let depthIndices = computeDepthIndices()
+
         for event in appModel.filteredEvents {
             let entity: TimelineEventEntity
 
@@ -119,8 +121,10 @@ struct ImmersiveView: View {
                 )
             } else {
                 // Point events get spheres
-                let position = calculatePosition(for: event, in: dateRange)
+                let depth = depthIndices[event.id] ?? 0
+                let position = calculatePosition(for: event, in: dateRange, depthIndex: depth)
                 entity = TimelineEventEntity(event: event, position: position)
+                entity.depthIndex = depth
                 entity.position.y += appModel.timelineHeight
             }
 
@@ -147,6 +151,7 @@ struct ImmersiveView: View {
         }
 
         // Add entities for new events
+        let depthIndices = computeDepthIndices()
         for event in appModel.filteredEvents where !existingEventIds.contains(event.id) {
             let entity: TimelineEventEntity
 
@@ -168,8 +173,10 @@ struct ImmersiveView: View {
                 )
             } else {
                 // Point events get spheres
-                let position = calculatePosition(for: event, in: dateRange)
+                let depth = depthIndices[event.id] ?? 0
+                let position = calculatePosition(for: event, in: dateRange, depthIndex: depth)
                 entity = TimelineEventEntity(event: event, position: position)
+                entity.depthIndex = depth
                 entity.position.y += appModel.timelineHeight
             }
 
@@ -200,7 +207,7 @@ struct ImmersiveView: View {
             } else if let eventEntity = child as? TimelineEventEntity,
                       let event = eventEntity.timelineEvent,
                       let dateRange = appModel.dateRange {
-                let position = calculatePosition(for: event, in: dateRange)
+                let position = calculatePosition(for: event, in: dateRange, depthIndex: eventEntity.depthIndex)
                 child.position = SIMD3<Float>(position.x, position.y + appModel.timelineHeight, position.z)
             }
         }
@@ -221,34 +228,52 @@ struct ImmersiveView: View {
     /// Calculate 3D position for an event
     /// - Date determines the angle around the user
     /// - Event type determines the height layer
-    /// - Range events get offset slightly outward
-    private func calculatePosition(for event: TimelineEvent, in dateRange: ClosedRange<Date>) -> TimelinePosition {
+    /// - depthIndex offsets overlapping same-date/type events radially outward
+    private func calculatePosition(for event: TimelineEvent, in dateRange: ClosedRange<Date>, depthIndex: Int = 0) -> TimelinePosition {
         let angle = calculateAngle(for: event.startDate, in: dateRange)
 
-        // All events share the same cylinder radius
-        let radius = appModel.timelineRadius
+        // Overlapping events line up behind the front event at increasing radii
+        let depthSpacing: Float = 0.04
+        let radius = appModel.timelineRadius + Float(depthIndex) * depthSpacing
 
         // Calculate height based on event type (stacked layers)
         let heightPerGroup: Float = 0.08
         let baseHeight = Float(event.eventType.groupIndex) * heightPerGroup - 0.3
 
-        // Add small random offset to prevent exact overlaps
-        let jitterX = Float.random(in: -0.02...0.02)
-        let jitterY = Float.random(in: -0.01...0.01)
-        let jitterZ = Float.random(in: -0.02...0.02)
-
-        var position = TimelinePosition.fromCylindrical(
+        let position = TimelinePosition.fromCylindrical(
             angle: angle,
             radius: radius,
             height: baseHeight
         )
 
         return TimelinePosition(
-            x: position.x + jitterX,
-            y: position.y + jitterY,
-            z: position.z + jitterZ,
+            x: position.x,
+            y: position.y,
+            z: position.z,
             angle: angle
         )
+    }
+
+    /// Group point events by calendar date + event type and assign a depth index to each.
+    /// Index 0 = front position on the arc, 1+ = stacked behind.
+    private func computeDepthIndices() -> [String: Int] {
+        let calendar = Calendar.current
+        var groups: [String: [String]] = [:]
+
+        for event in appModel.filteredEvents {
+            if event.isRangeEvent { continue }
+            let day = calendar.startOfDay(for: event.startDate)
+            let key = "\(day.timeIntervalSince1970)_\(event.eventType)"
+            groups[key, default: []].append(event.id)
+        }
+
+        var result: [String: Int] = [:]
+        for (_, ids) in groups {
+            for (i, id) in ids.enumerated() {
+                result[id] = i
+            }
+        }
+        return result
     }
 
     // MARK: - Gestures

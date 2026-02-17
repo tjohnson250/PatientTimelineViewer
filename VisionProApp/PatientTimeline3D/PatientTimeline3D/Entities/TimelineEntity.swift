@@ -57,8 +57,9 @@ class TimelineEventEntity: Entity, HasModel, HasCollision {
         // Add collision for interaction
         setupCollision(for: event)
 
-        // Face the user (center of the space)
-        self.look(at: .zero, from: self.position, relativeTo: nil)
+        // Face inward toward the user at the center of the cylinder
+        let outward = SIMD3<Float>(self.position.x * 2, self.position.y, self.position.z * 2)
+        self.look(at: outward, from: self.position, relativeTo: nil)
     }
 
     /// Create a timeline event entity for range events (horizontal arc)
@@ -385,7 +386,8 @@ class TimelineAxisEntity: Entity, HasModel {
                 textMaterial.color = .init(tint: .white)
                 labelEntity.components.set(ModelComponent(mesh: textMesh, materials: [textMaterial]))
                 labelEntity.position = SIMD3<Float>(x, 0.05, z)
-                labelEntity.look(at: .zero, from: labelEntity.position, relativeTo: nil)
+                let outward = SIMD3<Float>(x * 2, 0.05, z * 2)
+                labelEntity.look(at: outward, from: labelEntity.position, relativeTo: nil)
 
                 self.addChild(labelEntity)
 

@@ -49,6 +49,39 @@ struct ContentView: View {
                 }
             }
 
+            // Immersive Space Control
+            Section("3D View") {
+                Toggle("Immersive Timeline", isOn: Binding(
+                    get: { appModel.isImmersiveSpaceOpen },
+                    set: { newValue in
+                        Task {
+                            if newValue {
+                                await openImmersiveSpace(id: "ImmersiveTimeline")
+                                appModel.isImmersiveSpaceOpen = true
+                            } else {
+                                await dismissImmersiveSpace()
+                                appModel.isImmersiveSpaceOpen = false
+                            }
+                        }
+                    }
+                ))
+                .disabled(appModel.currentPatient == nil)
+
+                if appModel.isImmersiveSpaceOpen {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Timeline Radius")
+                            .font(.caption)
+                        Slider(value: $appModel.timelineRadius, in: 1.0...4.0, step: 0.5)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Vertical Position")
+                            .font(.caption)
+                        Slider(value: $appModel.timelineHeight, in: 0.5...2.0, step: 0.1)
+                    }
+                }
+            }
+
             // Patient Demographics (when loaded)
             if let patient = appModel.currentPatient {
                 Section("Demographics") {
@@ -83,39 +116,6 @@ struct ContentView: View {
                                     .foregroundColor(.secondary)
                             }
                         }
-                    }
-                }
-            }
-
-            // Immersive Space Control
-            Section("3D View") {
-                Toggle("Immersive Timeline", isOn: Binding(
-                    get: { appModel.isImmersiveSpaceOpen },
-                    set: { newValue in
-                        Task {
-                            if newValue {
-                                await openImmersiveSpace(id: "ImmersiveTimeline")
-                                appModel.isImmersiveSpaceOpen = true
-                            } else {
-                                await dismissImmersiveSpace()
-                                appModel.isImmersiveSpaceOpen = false
-                            }
-                        }
-                    }
-                ))
-                .disabled(appModel.currentPatient == nil)
-
-                if appModel.isImmersiveSpaceOpen {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Timeline Radius")
-                            .font(.caption)
-                        Slider(value: $appModel.timelineRadius, in: 1.0...4.0, step: 0.5)
-                    }
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Vertical Position")
-                            .font(.caption)
-                        Slider(value: $appModel.timelineHeight, in: 0.5...2.0, step: 0.1)
                     }
                 }
             }

@@ -7,6 +7,8 @@ struct ContentView: View {
     @Environment(\.openImmersiveSpace) var openImmersiveSpace
     @Environment(\.dismissImmersiveSpace) var dismissImmersiveSpace
 
+    @Environment(\.scenePhase) private var scenePhase
+
     @State private var patientIdInput: String = "SAMPLE_001"
     @State private var showingFilters: Bool = false
 
@@ -23,8 +25,8 @@ struct ContentView: View {
             }
         }
         .navigationTitle("Patient Timeline 3D")
-        .onDisappear {
-            if appModel.isImmersiveSpaceOpen {
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .background && appModel.isImmersiveSpaceOpen {
                 Task {
                     await dismissImmersiveSpace()
                     appModel.isImmersiveSpaceOpen = false

@@ -23,6 +23,14 @@ struct ContentView: View {
             }
         }
         .navigationTitle("Patient Timeline 3D")
+        .onDisappear {
+            if appModel.isImmersiveSpaceOpen {
+                Task {
+                    await dismissImmersiveSpace()
+                    appModel.isImmersiveSpaceOpen = false
+                }
+            }
+        }
     }
 
     // MARK: - Sidebar Content

@@ -1318,7 +1318,7 @@ timeline_server <- function(input, output, session) {
 
     timevis::timevis(
       data = events,
-      groups = get_timeline_groups(),
+      groups = get_active_timeline_groups(events),
       options = config,
       showZoom = FALSE
     )

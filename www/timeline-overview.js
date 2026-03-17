@@ -66,11 +66,14 @@
     'event-death': '#2c3e50'
   };
 
-  // Group ordering for Y-position
-  var groupOrder = [
+  // Canonical group ordering (all possible groups)
+  var fullGroupOrder = [
     'encounters', 'diagnoses', 'procedures', 'labs',
     'prescribing', 'dispensing', 'vitals', 'conditions'
   ];
+
+  // Active group ordering for Y-position (updated from timeline widget)
+  var groupOrder = fullGroupOrder.slice();
 
   // ---- Coordinate mapping ----
 
@@ -341,9 +344,10 @@
         }
       }
 
-      // Determine Y position from group
+      // Determine Y position from group (skip items without a matching active group)
+      if (!item.group) return;
       var groupIdx = groupOrder.indexOf(item.group);
-      if (groupIdx === -1) groupIdx = groupOrder.length - 1;
+      if (groupIdx === -1) return;
       var y = (groupIdx + 0.5) * rowHeight;
 
       var startDate = new Date(item.start);
@@ -702,6 +706,21 @@
 
     // Compute date range from items
     if (!computeDateRange()) return;
+
+    // Read active groups from timeline widget
+    var groups = widget.timeline.groupsData;
+    if (groups) {
+      var currentGroups = groups.get();
+      if (currentGroups && currentGroups.length > 0) {
+        var newOrder = [];
+        fullGroupOrder.forEach(function(g) {
+          for (var i = 0; i < currentGroups.length; i++) {
+            if (currentGroups[i].id === g) { newOrder.push(g); break; }
+          }
+        });
+        if (newOrder.length > 0) groupOrder = newOrder;
+      }
+    }
 
     // Render events
     renderEvents();

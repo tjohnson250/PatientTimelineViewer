@@ -25,12 +25,29 @@ NULL
 #' @export
 get_timeline_groups <- function() {
   data.frame(
-    id = c("encounters", "diagnoses", "procedures", "labs", 
+    id = c("encounters", "diagnoses", "procedures", "labs",
            "prescribing", "dispensing", "vitals", "conditions"),
     content = c("Encounters", "Diagnoses", "Procedures", "Labs",
                 "Prescriptions", "Dispensing", "Vitals", "Conditions"),
     stringsAsFactors = FALSE
   )
+}
+
+#' Get active timeline groups based on current events
+#'
+#' Filters the master group list to only include groups that have
+#' visible events. Falls back to all groups when there are no events.
+#'
+#' @param events Data frame of timeline events (must have a \code{group} column)
+#' @return Data frame with columns \code{id} and \code{content}
+#' @export
+get_active_timeline_groups <- function(events) {
+  all_groups <- get_timeline_groups()
+  if (is.null(events) || nrow(events) == 0) return(all_groups)
+  active_ids <- unique(events$group[!is.na(events$group)])
+  active <- all_groups[all_groups$id %in% active_ids, , drop = FALSE]
+  if (nrow(active) == 0) return(all_groups)
+  active
 }
 
 #' Create tooltip HTML for an event

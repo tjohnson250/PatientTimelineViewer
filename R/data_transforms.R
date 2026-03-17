@@ -289,17 +289,17 @@ transform_diagnoses <- function(diagnoses) {
         "Description" = tooltip_description,
         "Type" = DX_TYPE,
         "PDX" = pdx_desc,
-        "Date" = format(parsed_date, "%Y-%m-%d"),
-        "Encounter" = ENCOUNTERID
+        "Date" = format(parsed_date, "%Y-%m-%d")
       ),
       source_table = "DIAGNOSIS",
       source_key = as.character(DIAGNOSISID),
       event_type = "diagnosis",
+      encounter_id = as.character(ENCOUNTERID),
       cdw_source = as.character(CDW_Source)
     ) %>%
     ungroup() %>%
     select(id, content, start, end, group, type, className, title,
-           source_table, source_key, event_type, cdw_source)
+           source_table, source_key, event_type, encounter_id, cdw_source)
 }
 
 #' Transform procedures to timevis format
@@ -351,17 +351,17 @@ transform_procedures <- function(procedures) {
         "Procedure Code" = PX,
         "Description" = RAW_PX_NAME,
         "Type" = PX_TYPE,
-        "Date" = format(parsed_date, "%Y-%m-%d"),
-        "Encounter" = ENCOUNTERID
+        "Date" = format(parsed_date, "%Y-%m-%d")
       ),
       source_table = "PROCEDURES",
       source_key = as.character(PROCEDURESID),
       event_type = "procedure",
+      encounter_id = as.character(ENCOUNTERID),
       cdw_source = as.character(CDW_Source)
     ) %>%
     ungroup() %>%
     select(id, content, start, end, group, type, className, title,
-           source_table, source_key, event_type, cdw_source)
+           source_table, source_key, event_type, encounter_id, cdw_source)
 }
 
 #' Format lab result with modifiers and abnormal flags
@@ -471,11 +471,12 @@ transform_labs <- function(labs) {
       source_table = "LAB_RESULT_CM",
       source_key = as.character(LAB_RESULT_CM_ID),
       event_type = "lab",
+      encounter_id = as.character(ENCOUNTERID),
       cdw_source = as.character(CDW_Source)
     ) %>%
     ungroup() %>%
     select(id, content, start, end, group, type, className, title,
-           source_table, source_key, event_type, cdw_source)
+           source_table, source_key, event_type, encounter_id, cdw_source)
 }
 
 #' Transform prescribing to timevis format
@@ -550,11 +551,12 @@ transform_prescribing <- function(prescribing) {
       source_table = "PRESCRIBING",
       source_key = as.character(PRESCRIBINGID),
       event_type = "prescribing",
+      encounter_id = as.character(ENCOUNTERID),
       cdw_source = as.character(CDW_Source)
     ) %>%
     ungroup() %>%
     select(id, content, start, end, group, type, className, title,
-           source_table, source_key, event_type, cdw_source)
+           source_table, source_key, event_type, encounter_id, cdw_source)
 }
 
 #' Transform dispensing to timevis format
@@ -699,11 +701,12 @@ transform_vitals <- function(vitals) {
       source_table = "VITAL",
       source_key = as.character(VITALID),
       event_type = "vital",
+      encounter_id = as.character(ENCOUNTERID),
       cdw_source = as.character(CDW_Source)
     ) %>%
     ungroup() %>%
     select(id, content, start, end, group, type, className, title,
-           source_table, source_key, event_type, cdw_source)
+           source_table, source_key, event_type, encounter_id, cdw_source)
 }
 
 #' Transform conditions to timevis format
@@ -790,11 +793,12 @@ transform_conditions <- function(conditions) {
       source_table = "CONDITION",
       source_key = as.character(CONDITIONID),
       event_type = "condition",
+      encounter_id = as.character(ENCOUNTERID),
       cdw_source = as.character(CDW_Source)
     ) %>%
     ungroup() %>%
     select(id, content, start, end, group, type, className, title,
-           source_table, source_key, event_type, cdw_source)
+           source_table, source_key, event_type, encounter_id, cdw_source)
 }
 
 #' Create death marker for timeline
@@ -942,6 +946,42 @@ transform_all_to_timevis <- function(patient_data) {
     transform_safe(transform_conditions, patient_data$conditions, "conditions"),
     transform_safe(transform_death, patient_data$death, "death")
   )
+
+  # Add encounter info (ID + admit/discharge dates) to tooltips for non-encounter events
+  if (nrow(events) > 0 && !is.null(patient_data$encounters) &&
+      nrow(patient_data$encounters) > 0) {
+    # Ensure encounter_id column exists (bind_rows fills NA for transforms without it)
+    if (!"encounter_id" %in% names(events)) {
+      events$encounter_id <- NA_character_
+    }
+
+    enc_lookup <- patient_data$encounters %>%
+      dplyr::mutate(
+        enc_admit = format(safe_parse_date(ADMIT_DATE), "%Y-%m-%d"),
+        enc_discharge = format(safe_parse_date(DISCHARGE_DATE), "%Y-%m-%d"),
+        ENCOUNTERID = as.character(ENCOUNTERID)
+      ) %>%
+      dplyr::select(ENCOUNTERID, enc_admit, enc_discharge) %>%
+      dplyr::distinct(ENCOUNTERID, .keep_all = TRUE)
+
+    events <- events %>%
+      dplyr::left_join(enc_lookup, by = c("encounter_id" = "ENCOUNTERID"))
+
+    # Append encounter info to tooltips for non-encounter events with an encounter_id
+    has_enc <- !is.na(events$encounter_id) & events$event_type != "encounter"
+    if (any(has_enc)) {
+      enc_parts <- paste0(
+        "<br><b>Encounter:</b> ", htmltools::htmlEscape(events$encounter_id),
+        ifelse(!is.na(events$enc_admit),
+               paste0("<br><b>Admit Date:</b> ", events$enc_admit), ""),
+        ifelse(!is.na(events$enc_discharge),
+               paste0("<br><b>Discharge Date:</b> ", events$enc_discharge), "")
+      )
+      events$title[has_enc] <- paste0(events$title[has_enc], enc_parts[has_enc])
+    }
+
+    events <- events %>% dplyr::select(-enc_admit, -enc_discharge)
+  }
 
   # Add source system descriptions via lookup
   if (nrow(events) > 0 && !is.null(patient_data$source_descriptions) &&

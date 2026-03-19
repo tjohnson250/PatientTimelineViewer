@@ -192,6 +192,7 @@ transform_encounters <- function(encounters) {
       type = ifelse(is.na(parsed_end), "box", "range"),
       className = "event-encounter",
       title = create_tooltip(
+        "Encounter ID" = ENCOUNTERID,
         "Encounter Type" = ENC_TYPE,
         "Admit Date" = format(parsed_start, "%Y-%m-%d"),
         "Discharge Date" = if(is.na(parsed_end)) NA_character_ else format(parsed_end, "%Y-%m-%d"),

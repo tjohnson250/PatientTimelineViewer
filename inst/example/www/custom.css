@@ -258,6 +258,11 @@ body {
 .vis-item.vis-range {
   border-radius: 2px;
   padding: 4px 8px;
+  overflow: visible;
+}
+
+.vis-item.vis-range .vis-item-overflow {
+  overflow: visible;
 }
 
 /* Clustered items - base style */

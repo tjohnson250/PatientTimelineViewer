@@ -2,7 +2,7 @@
 # Filtering functions for timeline events
 
 #' @importFrom dplyr `%>%` filter pull
-#' @importFrom stringr str_detect str_to_lower
+#' @importFrom stringr str_detect str_replace_all str_to_lower
 NULL
 
 #' Filter events by event type

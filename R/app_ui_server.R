@@ -416,6 +416,25 @@ timeline_ui <- function() {
             ),
             # Vertical divider
             div(style = "width: 1px; background-color: #dee2e6; align-self: stretch; min-height: 24px; flex-shrink: 0;"),
+            # Retain filters checkbox
+            div(
+              style = "flex-shrink: 0;",
+              checkboxInput(
+                "retain_filters",
+                label = tags$span(
+                  "Retain filters on patient load",
+                  tags$i(
+                    class = "fa fa-question-circle help-icon",
+                    `data-toggle` = "tooltip",
+                    `data-placement` = "top",
+                    title = "When enabled, event type filter selections are preserved when loading a new patient."
+                  )
+                ),
+                value = FALSE
+              )
+            ),
+            # Vertical divider
+            div(style = "width: 1px; background-color: #dee2e6; align-self: stretch; min-height: 24px; flex-shrink: 0;"),
             # Advanced Filters summary trigger (inline)
             tags$span(
               style = "cursor: pointer; font-weight: 600; color: #7f8c8d; font-size: 13px;",
@@ -636,7 +655,8 @@ timeline_server <- function(input, output, session) {
     load_progress_step = 0,
     load_progress_total = 13,
     load_progress_name = "",
-    filter_programmatic_update = FALSE
+    filter_programmatic_update = FALSE,
+    retained_event_types = NULL
   )
 
   # Observer to update progress bar in modal
@@ -803,6 +823,18 @@ timeline_server <- function(input, output, session) {
       return()
     }
 
+    # Capture current event type selections if retain_filters is enabled
+    if (isTRUE(input$retain_filters) && !is.null(rv$patient_data)) {
+      all_types <- c("encounters", "diagnoses", "procedures", "labs",
+                     "prescribing", "dispensing", "vitals", "conditions")
+      rv$retained_event_types <- setNames(
+        vapply(all_types, function(type) isTRUE(input[[paste0("show_", type)]]), logical(1)),
+        all_types
+      )
+    } else {
+      rv$retained_event_types <- NULL
+    }
+
     # Reset cancellation flag and set loading flag
     rv$cancel_load <- FALSE
     rv$loading_in_progress <- TRUE
@@ -955,8 +987,11 @@ timeline_server <- function(input, output, session) {
       "conditions" = "Conditions"
     )
 
+    retained <- isolate(rv$retained_event_types)
+
     checkboxes <- lapply(names(event_types), function(type) {
       count <- counts[[type]]
+      checked <- if (!is.null(retained) && type %in% names(retained)) retained[[type]] else TRUE
       tags$div(
         class = "event-type-checkbox",
         tags$span(class = paste("color-indicator", type)),
@@ -965,7 +1000,7 @@ timeline_server <- function(input, output, session) {
           checkboxInput(
             inputId = paste0("show_", type),
             label = paste0(event_types[[type]], " (", count, ")"),
-            value = TRUE,
+            value = checked,
             width = "auto"
           )
         )

@@ -4,18 +4,33 @@
 \alias{load_patient_data}
 \title{Load all patient data}
 \usage{
-load_patient_data(conns, patid)
+load_patient_data(
+  conns,
+  patid,
+  cancel_check = NULL,
+  progress_callback = NULL,
+  source_descriptions = NULL
+)
 }
 \arguments{
 \item{conns}{Database connections list from \code{\link{get_db_connections}}}
 
 \item{patid}{Patient ID (PATID from the CDM)}
+
+\item{cancel_check}{Optional function that returns TRUE if loading should be cancelled.
+Checked between each query to allow early termination. If cancelled, returns NULL.}
+
+\item{progress_callback}{Optional function called with loading progress updates.}
+
+\item{source_descriptions}{Optional cached source description data frame. When supplied,
+skips re-querying the MPI source description lookup table.}
 }
 \value{
-Named list of data frames:
+Named list of data frames, or NULL if cancelled:
 \describe{
 \item{demographic}{Patient demographics}
 \item{source_systems}{Source system mappings from MPI}
+\item{source_descriptions}{Source system descriptions from MPI}
 \item{encounters}{Encounter records}
 \item{diagnoses}{Diagnosis records}
 \item{procedures}{Procedure records}
@@ -32,7 +47,7 @@ Named list of data frames:
 Load all clinical data for a patient from the PCORnet CDM database.
 Returns data from DEMOGRAPHIC, ENCOUNTER, DIAGNOSIS, PROCEDURES,
 LAB_RESULT_CM, PRESCRIBING, DISPENSING, VITAL, CONDITION, DEATH,
-and DEATH_CAUSE tables.
+and DEATH_CAUSE tables. Supports cancellation via callback function.
 }
 \examples{
 \dontrun{

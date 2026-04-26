@@ -676,6 +676,8 @@ query_death_cause <- function(conn, patid) {
 #' @param patid Patient ID (PATID from the CDM)
 #' @param cancel_check Optional function that returns TRUE if loading should be cancelled.
 #'   Checked between each query to allow early termination. If cancelled, returns NULL.
+#' @param source_descriptions Optional cached source description data frame. When supplied,
+#'   skips re-querying the MPI source description lookup table.
 #'
 #' @return Named list of data frames, or NULL if cancelled:
 #'   \describe{
@@ -701,7 +703,8 @@ query_death_cause <- function(conn, patid) {
 #' }
 #'
 #' @export
-load_patient_data <- function(conns, patid, cancel_check = NULL, progress_callback = NULL) {
+load_patient_data <- function(conns, patid, cancel_check = NULL, progress_callback = NULL,
+                              source_descriptions = NULL) {
   # Helper function to check if operation should be cancelled
   should_cancel <- function() {
     if (!is.null(cancel_check) && is.function(cancel_check)) {
@@ -722,6 +725,24 @@ load_patient_data <- function(conns, patid, cancel_check = NULL, progress_callba
   demographic <- query_demographic(conns$cdw, patid)
   if (should_cancel()) return(NULL)
 
+  if (nrow(demographic) == 0) {
+    return(list(
+      demographic = demographic,
+      source_systems = data.frame(),
+      source_descriptions = source_descriptions %||% data.frame(SRC = character(), SourceDescription = character()),
+      encounters = data.frame(),
+      diagnoses = data.frame(),
+      procedures = data.frame(),
+      labs = data.frame(),
+      prescribing = data.frame(),
+      dispensing = data.frame(),
+      vitals = data.frame(),
+      conditions = data.frame(),
+      death = data.frame(),
+      death_cause = data.frame()
+    ))
+  }
+
   # Load source systems (with error handling)
   report_progress(2, "Source Systems")
   source_systems <- tryCatch(
@@ -731,10 +752,12 @@ load_patient_data <- function(conns, patid, cancel_check = NULL, progress_callba
   if (should_cancel()) return(NULL)
 
   report_progress(3, "Source Descriptions")
-  source_descriptions <- tryCatch(
-    query_source_descriptions(conns$mpi),
-    error = function(e) data.frame(SRC = character(), SourceDescription = character())
-  )
+  if (is.null(source_descriptions)) {
+    source_descriptions <- tryCatch(
+      query_source_descriptions(conns$mpi),
+      error = function(e) data.frame(SRC = character(), SourceDescription = character())
+    )
+  }
   if (should_cancel()) return(NULL)
 
   # Load clinical data

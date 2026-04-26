@@ -117,13 +117,89 @@ body {
   letter-spacing: 0.5px;
 }
 
+/* Compact merged controls panel */
+.filter-panel.compact-controls {
+  padding: 10px 15px;
+}
+
+.filter-panel.compact-controls h4 {
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.filter-panel.compact-controls .controls-row {
+  margin-bottom: 8px;
+}
+
+.filter-panel.compact-controls .controls-row:last-child {
+  margin-bottom: 0;
+}
+
+.filter-panel.compact-controls .form-group {
+  margin-bottom: 4px;
+}
+
+.filter-panel.compact-controls .radio-inline {
+  padding-top: 0;
+  margin-right: 10px;
+}
+
+.filter-panel.compact-controls .checkbox {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* Compact color legend inside merged panel */
+.filter-panel.compact-controls .source-legend {
+  margin-top: 0;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.filter-panel.compact-controls .source-legend-items {
+  gap: 8px;
+}
+
+.filter-panel.compact-controls .source-legend-item {
+  font-size: 11px;
+}
+
+.filter-panel.compact-controls .source-legend-color {
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
+}
+
+/* Inline advanced filters within compact panel */
+.advanced-filters-inline {
+  margin: 0;
+}
+
+.advanced-filters-inline .form-group {
+  margin-bottom: 8px;
+}
+
+.advanced-filters-inline label {
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Event type checkbox grid layout */
+.event-type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 2px 20px;
+  justify-content: start;
+}
+
 /* Event type checkboxes with colored indicators */
 .event-type-checkbox {
   display: inline-flex;
-  align-items: flex-start;
-  margin-right: 15px;
-  margin-bottom: 8px;
+  align-items: center;
+  margin: 0;
   gap: 6px;
+  white-space: nowrap;
 }
 
 .event-type-checkbox .color-indicator {
@@ -131,31 +207,35 @@ body {
   height: 16px;
   border-radius: 3px;
   flex-shrink: 0;
-  margin-top: 5px;
 }
 
-.event-type-checkbox .checkbox-wrapper {
-  display: flex;
-  align-items: center;
+.event-type-checkbox .checkbox-wrapper .form-group,
+.event-type-checkbox .checkbox-wrapper .checkbox,
+.event-type-checkbox .checkbox-wrapper .checkbox label {
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+  line-height: 1;
 }
 
-.event-type-checkbox .checkbox-wrapper .form-group {
-  margin-bottom: 0;
+.event-type-checkbox .checkbox-wrapper .checkbox label {
+  padding-left: 20px;
+  font-size: 14px;
+  line-height: 20px;
 }
 
-.event-type-checkbox .checkbox-wrapper .checkbox {
-  margin-top: 0;
-  margin-bottom: 0;
+.event-type-checkbox .checkbox-wrapper .checkbox label input[type="checkbox"] {
+  margin-top: 3px;
 }
 
-.color-indicator.encounters { background-color: var(--color-encounter); }
-.color-indicator.diagnoses { background-color: var(--color-diagnosis); }
-.color-indicator.procedures { background-color: var(--color-procedure); }
-.color-indicator.labs { background-color: var(--color-lab); }
-.color-indicator.prescribing { background-color: var(--color-prescribing); }
-.color-indicator.dispensing { background-color: var(--color-dispensing); }
-.color-indicator.vitals { background-color: var(--color-vital); }
-.color-indicator.conditions { background-color: var(--color-condition); }
+.color-indicator.encounters { background-color: #d4dded; border: 1px solid #a9bbdb; }
+.color-indicator.diagnoses { background-color: #f0d4d4; border: 1px solid #dba9a9; }
+.color-indicator.procedures { background-color: #ded4ed; border: 1px solid #bda9db; }
+.color-indicator.labs { background-color: #d4eddb; border: 1px solid #a9dbb8; }
+.color-indicator.prescribing { background-color: #edded4; border: 1px solid #dbbda9; }
+.color-indicator.dispensing { background-color: #ede8d4; border: 1px solid #dbd1a9; }
+.color-indicator.vitals { background-color: #d4ebed; border: 1px solid #a9d7db; }
+.color-indicator.conditions { background-color: #edd4e7; border: 1px solid #dba9cf; }
 
 /* Timeline container */
 .timeline-container {
@@ -793,15 +873,32 @@ body {
   display: inline-flex;
   align-items: center;
   margin-right: 15px;
-  margin-bottom: 8px;
+  margin-bottom: 0;
+  gap: 6px;
+}
+
+.source-system-checkbox .color-indicator {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  flex-shrink: 0;
 }
 
 .source-system-checkbox .checkbox {
   margin: 0;
+  padding: 0;
+  min-height: 0;
 }
 
 .source-system-checkbox .form-group {
   margin-bottom: 0;
+  padding: 0;
+}
+
+.source-system-checkbox .checkbox label {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 20px;
 }
 
 /* Source system legend */
@@ -821,15 +918,17 @@ body {
 }
 
 .source-legend-items {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 2px 12px;
+  justify-content: start;
 }
 
 .source-legend-item {
   display: inline-flex;
   align-items: center;
   font-size: 12px;
+  white-space: nowrap;
 }
 
 .source-legend-color {
@@ -917,4 +1016,114 @@ body {
   font-size: 12px;
   color: var(--text-secondary);
   margin-top: 3px;
+}
+
+/* ============================================
+   Loading Progress Bar
+   ============================================ */
+
+/* ============================================
+   Timeline Overview / Minimap
+   ============================================ */
+
+#timeline-overview-container {
+  height: 96px;
+  background: #f8f9fa;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  margin-top: 4px;
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+}
+
+#overview-svg {
+  display: block;
+}
+
+.overview-viewport {
+  transition: fill 0.15s ease;
+}
+
+.overview-viewport:hover {
+  fill: rgba(52, 152, 219, 0.15);
+}
+
+.overview-handle {
+  transition: opacity 0.15s ease;
+}
+
+.overview-handle:hover {
+  opacity: 0.9 !important;
+}
+
+/* Filter range band */
+.filter-band {
+  transition: opacity 0.15s ease;
+}
+
+/* Filter range handles */
+.filter-handle {
+  transition: opacity 0.15s ease, fill 0.15s ease;
+}
+
+.filter-handle:hover {
+  opacity: 1.0 !important;
+  fill: #d35400;
+}
+
+/* Filter to View button - orange outline style */
+.btn-outline-warning {
+  color: #e67e22;
+  border-color: #e67e22;
+  background-color: transparent;
+}
+
+.btn-outline-warning:hover {
+  color: #fff;
+  background-color: #e67e22;
+  border-color: #e67e22;
+}
+
+.btn-outline-warning:focus,
+.btn-outline-warning.focus {
+  box-shadow: 0 0 0 0.2rem rgba(230, 126, 34, 0.25);
+}
+
+/* Filter range label below minimap */
+#filter-range-label {
+  transition: color 0.2s ease, font-weight 0.2s ease;
+}
+
+/* Hidden labels mode - compact event markers */
+.hide-labels .vis-item-content {
+  font-size: 0;
+  padding: 0 !important;
+  line-height: 0;
+}
+
+.hide-labels .vis-item.vis-box,
+.hide-labels .vis-item.vis-point {
+  min-width: 6px;
+  padding: 3px 3px !important;
+}
+
+.hide-labels .vis-item.vis-range {
+  min-width: 6px;
+  padding: 3px 2px !important;
+}
+
+.hide-labels .vis-item.vis-cluster {
+  min-width: 6px;
+  padding: 3px 3px !important;
+}
+
+/* Progress bar for loading modal - enhanced styling */
+.loading-progress-bar {
+  background: linear-gradient(90deg, #3498db 0%, #2980b9 100%) !important;
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.3);
+}
+
+.loading-progress-container {
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
 }

@@ -656,7 +656,9 @@ timeline_server <- function(input, output, session) {
     load_progress_total = 13,
     load_progress_name = "",
     filter_programmatic_update = FALSE,
-    retained_event_types = NULL
+    retained_event_types = NULL,
+    source_descriptions_cache = NULL,
+    source_system_summary = NULL
   )
 
   # Observer to update progress bar in modal
@@ -900,7 +902,8 @@ timeline_server <- function(input, output, session) {
           rv$load_progress_step <- step
           rv$load_progress_total <- total
           rv$load_progress_name <- step_name
-        }
+        },
+        source_descriptions = isolate(rv$source_descriptions_cache)
       )
 
       # Check if loading was cancelled
@@ -912,6 +915,11 @@ timeline_server <- function(input, output, session) {
 
       # Check if patient exists
       if (nrow(patient_data_result$demographic) == 0) {
+        rv$patient_data <- NULL
+        rv$timeline_events <- NULL
+        rv$selected_event <- NULL
+        rv$date_range <- NULL
+        rv$source_system_summary <- NULL
         rv$loading_in_progress <- FALSE
         removeModal()
         showNotification(
@@ -930,6 +938,7 @@ timeline_server <- function(input, output, session) {
 
       # Store the loaded data
       rv$patient_data <- patient_data_result
+      rv$source_descriptions_cache <- patient_data_result$source_descriptions
 
       # Get date range
       rv$date_range <- get_date_range(rv$patient_data)
@@ -940,6 +949,7 @@ timeline_server <- function(input, output, session) {
 
       # Transform to timeline format
       rv$timeline_events <- transform_all_to_timevis(rv$patient_data)
+      rv$source_system_summary <- get_source_systems(rv$patient_data)
 
       # Update encounter type filter
       enc_types <- get_encounter_types(rv$patient_data$encounters)
@@ -1030,6 +1040,36 @@ timeline_server <- function(input, output, session) {
     "#E74C3C", "#27AE60", "#F39C12", "#1ABC9C"
   )
 
+  event_style_lookup <- c(
+    encounter = "background-color: #d4dded; border-color: #a9bbdb;",
+    diagnosis = "background-color: #f0d4d4; border-color: #dba9a9;",
+    procedure = "background-color: #ded4ed; border-color: #bda9db;",
+    lab = "background-color: #d4eddb; border-color: #a9dbb8;",
+    prescribing = "background-color: #edded4; border-color: #dbbda9;",
+    dispensing = "background-color: #ede8d4; border-color: #dbd1a9;",
+    vital = "background-color: #d4ebed; border-color: #a9d7db;",
+    condition = "background-color: #edd4e7; border-color: #dba9cf;",
+    death = "background-color: #d5d8dc; border-color: #85929e;"
+  )
+
+  source_style_palette <- c(
+    "background-color: #FFE5D9; border-color: #FF6B35;",
+    "background-color: #D4F5F0; border-color: #2EC4B6;",
+    "background-color: #E8DAEF; border-color: #9B59B6;",
+    "background-color: #D4E4F7; border-color: #3498DB;",
+    "background-color: #FADBD8; border-color: #E74C3C;",
+    "background-color: #D5F4E6; border-color: #27AE60;",
+    "background-color: #FDEBD0; border-color: #F39C12;",
+    "background-color: #D0F0ED; border-color: #1ABC9C;"
+  )
+
+  get_source_summary <- function() {
+    if (!is.null(rv$source_system_summary)) {
+      return(rv$source_system_summary)
+    }
+    get_source_systems(rv$patient_data)
+  }
+
   # Helper function to get color for a source code
 
   # Colors are assigned dynamically based on position in the sorted source list
@@ -1054,7 +1094,7 @@ timeline_server <- function(input, output, session) {
   output$source_system_checkboxes <- renderUI({
     req(rv$patient_data)
 
-    sources <- get_source_systems(rv$patient_data)
+    sources <- get_source_summary()
 
     if (nrow(sources) == 0) {
       return(tags$p(
@@ -1138,7 +1178,7 @@ timeline_server <- function(input, output, session) {
       return(NULL)
     } else {
       # Source system legend - show colored squares for each source
-      sources <- get_source_systems(rv$patient_data)
+      sources <- get_source_summary()
       if (nrow(sources) == 0) return(NULL)
 
       # Source system colors (must match CSS)
@@ -1184,7 +1224,7 @@ timeline_server <- function(input, output, session) {
   get_selected_source_systems <- reactive({
     req(rv$patient_data)
 
-    sources <- get_source_systems(rv$patient_data)
+    sources <- get_source_summary()
 
     if (nrow(sources) == 0) return(NULL)
 
@@ -1204,11 +1244,9 @@ timeline_server <- function(input, output, session) {
     selected
   })
 
-  # Filtered and aggregated events with inline styles for coloring
-  filtered_events <- reactive({
+  filtered_raw_events <- reactive({
     req(rv$timeline_events)
 
-    # Collect filter values
     filters <- list(
       event_types = get_selected_event_types(),
       start_date = input$date_start,
@@ -1223,74 +1261,33 @@ timeline_server <- function(input, output, session) {
       source_systems = get_selected_source_systems()
     )
 
-    # Apply filters
-    events <- apply_all_filters(rv$timeline_events, rv$patient_data, filters)
+    apply_all_filters(rv$timeline_events, rv$patient_data, filters)
+  })
 
-    # Apply aggregation
-    events <- aggregate_events(events, input$aggregation)
+  aggregated_events <- reactive({
+    aggregate_events(filtered_raw_events(), input$aggregation)
+  })
 
-    # Apply inline styles based on color scheme
+  # Filtered and aggregated events with inline styles for coloring
+  filtered_events <- reactive({
+    events <- aggregated_events()
     color_scheme <- input$color_scheme
     if (is.null(color_scheme)) color_scheme <- "event_type"
 
-    # Define color palettes
-    event_colors <- list(
-      encounter = list(bg = "#d4dded", border = "#a9bbdb"),
-      diagnosis = list(bg = "#f0d4d4", border = "#dba9a9"),
-      procedure = list(bg = "#ded4ed", border = "#bda9db"),
-      lab = list(bg = "#d4eddb", border = "#a9dbb8"),
-      prescribing = list(bg = "#edded4", border = "#dbbda9"),
-      dispensing = list(bg = "#ede8d4", border = "#dbd1a9"),
-      vital = list(bg = "#d4ebed", border = "#a9d7db"),
-      condition = list(bg = "#edd4e7", border = "#dba9cf"),
-      death = list(bg = "#d5d8dc", border = "#85929e")
-    )
-
-    source_colors <- list(
-      list(bg = "#FFE5D9", border = "#FF6B35"),
-      list(bg = "#D4F5F0", border = "#2EC4B6"),
-      list(bg = "#E8DAEF", border = "#9B59B6"),
-      list(bg = "#D4E4F7", border = "#3498DB"),
-      list(bg = "#FADBD8", border = "#E74C3C"),
-      list(bg = "#D5F4E6", border = "#27AE60"),
-      list(bg = "#FDEBD0", border = "#F39C12"),
-      list(bg = "#D0F0ED", border = "#1ABC9C")
-    )
-
     if (nrow(events) > 0) {
       if (color_scheme == "source_system") {
-        # Get alphabetically sorted unique sources from ALL events (not filtered)
-        # This ensures colors stay consistent even when sources are filtered out
         unique_sources <- sort(unique(rv$timeline_events$cdw_source[!is.na(rv$timeline_events$cdw_source) & rv$timeline_events$cdw_source != ""]))
+        source_idx <- match(events$cdw_source, unique_sources)
+        palette_idx <- ((source_idx - 1) %% length(source_style_palette)) + 1
+        styles <- source_style_palette[palette_idx]
+        styles[is.na(styles) | is.na(events$cdw_source) | events$cdw_source == ""] <-
+          "background-color: #e0e0e0; border-color: #bdbdbd;"
+        events$style <- styles
 
-        events <- events %>%
-          dplyr::rowwise() %>%
-          dplyr::mutate(
-            style = {
-              if (!is.na(cdw_source) && cdw_source != "") {
-                source_idx <- match(cdw_source, unique_sources)
-                color_num <- ((source_idx - 1) %% 8) + 1
-                colors <- source_colors[[color_num]]
-                paste0("background-color: ", colors$bg, "; border-color: ", colors$border, ";")
-              } else {
-                # Fallback for events without source (use gray)
-                "background-color: #e0e0e0; border-color: #bdbdbd;"
-              }
-            }
-          ) %>%
-          dplyr::ungroup()
       } else {
-        # Event type coloring
-        events <- events %>%
-          dplyr::rowwise() %>%
-          dplyr::mutate(
-            style = {
-              colors <- event_colors[[event_type]]
-              if (is.null(colors)) colors <- list(bg = "#e0e0e0", border = "#bdbdbd")
-              paste0("background-color: ", colors$bg, "; border-color: ", colors$border, ";")
-            }
-          ) %>%
-          dplyr::ungroup()
+        styles <- event_style_lookup[events$event_type]
+        styles[is.na(styles)] <- "background-color: #e0e0e0; border-color: #bdbdbd;"
+        events$style <- unname(styles)
       }
     }
 

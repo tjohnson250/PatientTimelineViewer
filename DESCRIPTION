@@ -21,7 +21,8 @@ Imports:
     DBI,
     config,
     htmltools,
-    stringr
+    stringr,
+    jsonlite
 Suggests:
     odbc,
     duckdb,

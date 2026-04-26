@@ -995,7 +995,7 @@ transform_all_to_timevis <- function(patient_data) {
       ) %>%
       dplyr::rename(source_description = SourceDescription)
   } else {
-    events$source_description <- NA_character_
+    events$source_description <- rep(NA_character_, nrow(events))
   }
 
   # Add source info to tooltips and CSS classes

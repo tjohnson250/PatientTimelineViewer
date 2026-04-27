@@ -30,8 +30,7 @@ Suggests:
     callr,
     testthat (>= 3.0.0),
     knitr,
-    quarto,
-    icd.data
+    quarto
 VignetteBuilder: quarto
 Encoding: UTF-8
 RoxygenNote: 7.3.3

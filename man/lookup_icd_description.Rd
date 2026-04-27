@@ -15,6 +15,6 @@ lookup_icd_description(code, code_type = "10")
 Description string or NA if not found
 }
 \description{
-Looks up the description for an ICD-9 or ICD-10 code using the icd.data package.
+Looks up the description for an ICD-9 or ICD-10 code using bundled lookup data.
 Falls back to the code itself if no description is found.
 }

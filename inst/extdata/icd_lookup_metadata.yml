@@ -1,0 +1,20 @@
+icd10cm:
+  source: CDC/NCHS
+  fiscal_year: 2026
+  release: April 1 2026
+  effective_from: 2026-04-01
+  effective_to: 2026-09-30
+  source_url: "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/ICD10CM/2026-update/icd10cm-April-1-2026-XML.zip"
+  source_sha256: "0b50672322cd53b222d007fe703e2708dfa3b34f296eb2016bb3cf2109f0fd64"
+  lookup_sha256: "bcd1c8327f8fc9fd8bee3869f737a0d352b04d6109e55de9ae186fc15a1daff9"
+  row_count: 46881
+icd9cm:
+  source: CMS
+  version: 32
+  effective_from: 2014-10-01
+  final_release: true
+  source_url: "https://www.cms.gov/Medicare/Coding/ICD9ProviderDiagnosticCodes/Downloads/ICD-9-CM-v32-master-descriptions.zip"
+  source_sha256: "45a7d05ddcadf124af88375b64cdf068bb1e3f999ce7fdacb91f65f4e6d55f08"
+  lookup_sha256: "b69885acf53693e591a5edecbea2ea3cf00ad6e77d187957be7bf6d54e70cb09"
+  row_count: 14567
+generated_at: 2026-04-27T02:21:48Z

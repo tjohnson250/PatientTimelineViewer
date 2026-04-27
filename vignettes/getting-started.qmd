@@ -2,20 +2,13 @@
 title: "Getting Started with PatientTimelineViewer"
 author: "Todd Johnson"
 format: html
+execute:
+  eval: false
 vignette: >
   %\VignetteIndexEntry{Getting Started with PatientTimelineViewer}
   %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
 ---
-
-```{r}
-#| include: false
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  eval = FALSE
-)
-```
 
 ## Overview
 
@@ -25,7 +18,7 @@ PatientTimelineViewer is an R package for visualizing patient clinical data from
 
 Install the package from GitHub:
 
-```{r}
+```r
 # Install remotes if needed
 install.packages("remotes")
 
@@ -37,7 +30,7 @@ remotes::install_github("tjohnson250/PatientTimelineViewer")
 
 Depending on your database backend, install one of:
 
-```{r}
+```r
 # For DuckDB (development/testing, included sample data)
 install.packages("duckdb")
 
@@ -45,19 +38,15 @@ install.packages("duckdb")
 install.packages("odbc")
 ```
 
-### Optional: ICD Code Descriptions
+### ICD Code Descriptions
 
-To display human-readable descriptions for ICD-10 and ICD-9 diagnosis codes:
-
-```{r}
-install.packages("icd.data")
-```
+Human-readable ICD-10-CM and ICD-9-CM diagnosis descriptions are bundled with the package. Run `tools/update_icd_lookups.R` from the repository root when refreshing official CDC/CMS lookup data.
 
 ### Optional: AI-Powered Filtering
 
 To enable natural language filtering with Claude AI:
 
-```{r}
+```r
 install.packages("httr2")
 ```
 
@@ -71,7 +60,7 @@ ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
 
 Launch the demo app with the included synthetic sample data:
 
-```{r}
+```r
 library(PatientTimelineViewer)
 runExample()
 ```
@@ -130,7 +119,7 @@ production:
 
 To use a specific profile:
 
-```{r}
+```r
 Sys.setenv(R_CONFIG_ACTIVE = "production")
 runExample()
 ```
@@ -139,7 +128,7 @@ runExample()
 
 Beyond the Shiny app, you can use the package functions in your own code:
 
-```{r}
+```r
 library(PatientTimelineViewer)
 
 # Connect to databases
@@ -251,7 +240,7 @@ If configured with an Anthropic API key, use natural language queries:
 
 The package includes synthetic sample data for testing:
 
-```{r}
+```r
 # Get paths to bundled sample databases
 cdw_path <- get_sample_data_path("cdw")
 mpi_path <- get_sample_data_path("mpi")
@@ -280,7 +269,7 @@ Restart R/RStudio after installing the package.
 
 Ensure the database file exists and you have read permissions:
 
-```{r}
+```r
 file.exists(get_sample_data_path("cdw"))  # Should be TRUE
 ```
 
@@ -289,7 +278,7 @@ file.exists(get_sample_data_path("cdw"))  # Should be TRUE
 1. Verify your ODBC DSN is configured (check ODBC Data Source Administrator)
 2. Test the connection:
 
-```{r}
+```r
 library(DBI)
 library(odbc)
 con <- dbConnect(odbc(), "YourDSN")
@@ -301,7 +290,7 @@ dbDisconnect(con)
 
 1. Check that `ANTHROPIC_API_KEY` is set:
 
-```{r}
+```r
 Sys.getenv("ANTHROPIC_API_KEY")  # Should not be empty
 ```
 

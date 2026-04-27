@@ -142,7 +142,7 @@ shiny::runApp()
 -   **Interactive Timeline**: Visual timeline of all clinical events using the timevis library
 -   **Multiple Event Types**: Encounters, Diagnoses, Procedures, Labs, Prescriptions, Dispensing, Vitals, Conditions, and Death
 -   **PATID Autocomplete**: Type-ahead search with debounced input - start typing a PATID (min 2 characters) to see matching patients with DOB/sex details
--   **ICD Code Descriptions**: Automatic lookup of ICD-10-CM and ICD-9-CM code descriptions on diagnosis events using the `icd.data` package
+-   **ICD Code Descriptions**: Automatic lookup of ICD-10-CM and ICD-9-CM code descriptions on diagnosis events using bundled official CDC/CMS lookup tables
 -   **AI-Powered Semantic Filtering** (Optional): Use natural language queries like "Show statins" or "Show encounters with A1c > 9" to filter patient data
 -   **Compact Display & Filters Panel**: All controls consolidated into a single panel — AI filter, event type checkboxes, source system checkboxes, color scheme, aggregation, clustering, labels, and advanced filters
 -   **Aggregation Options**: View events individually, aggregated by day, or by week
@@ -188,11 +188,9 @@ install.packages("odbc")
 install.packages("duckdb")
 ```
 
-### For ICD Code Descriptions (optional)
+### For ICD Code Descriptions
 
-``` r
-install.packages("icd.data")
-```
+The package includes normalized ICD-10-CM and ICD-9-CM diagnosis lookup tables in `inst/extdata/`. Use `tools/update_icd_lookups.R` to regenerate them from official CDC/CMS downloads and `tools/check_icd_lookup_freshness.R` to verify checksums and detect newer CDC ICD-10-CM releases.
 
 ### For AI-Powered Semantic Filtering (optional)
 
@@ -543,7 +541,7 @@ The colored squares on event type checkboxes serve as the color legend. A separa
 -   Events after death date remain visible for data quality review
 -   Abnormal lab results are highlighted with a warning indicator
 -   Prescription end dates are calculated from days supply if not explicitly provided
--   ICD-10 and ICD-9 diagnosis code descriptions are automatically displayed when the `icd.data` package is installed
+-   ICD-10 and ICD-9 diagnosis code descriptions are automatically displayed from bundled official CDC/CMS lookup tables
 
 ## Troubleshooting
 
@@ -576,9 +574,6 @@ install.packages("odbc")
 
 # For DuckDB
 install.packages("duckdb")
-
-# For ICD code descriptions
-install.packages("icd.data")
 
 # For semantic filtering
 install.packages("httr2")

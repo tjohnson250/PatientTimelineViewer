@@ -243,7 +243,7 @@ transform_diagnoses <- function(diagnoses) {
   }
 
   # Look up ICD descriptions vectorized (before rowwise)
-  # Only do this if icd.data is available
+  # Only do this if ICD lookup data is available
   if (icd_data_available()) {
     diagnoses <- diagnoses %>%
       mutate(

@@ -1,34 +1,50 @@
 # icd_lookup.R
-# ICD code description lookup functions using icd.data package
+# ICD code description lookup functions using bundled official lookup data
 
 # Package-level cache for ICD lookup tables
 .icd_cache <- new.env(parent = emptyenv())
 
-#' Check if icd.data package is available
-#' @return Logical TRUE if available
-icd_data_available <- function() {
+bundled_icd_path <- function(filename) {
+  path <- system.file("extdata", filename, package = "PatientTimelineViewer")
+  if (path == "" || !file.exists(path)) {
+    dev_path <- file.path("inst", "extdata", filename)
+    if (file.exists(dev_path)) {
+      path <- dev_path
+    }
+  }
 
-  requireNamespace("icd.data", quietly = TRUE)
+  if (path == "" || !file.exists(path)) {
+    return(NULL)
+  }
+
+  path
+}
+
+#' Check if ICD description lookup data is available
+#' @return Logical TRUE if bundled data is available
+icd_data_available <- function() {
+  !is.null(bundled_icd_path("icd10cm_diagnosis_lookup.csv")) ||
+    !is.null(bundled_icd_path("icd9cm_diagnosis_lookup.csv"))
+}
+
+load_bundled_icd_lookup <- function(filename) {
+  path <- bundled_icd_path(filename)
+  if (is.null(path)) {
+    return(NULL)
+  }
+
+  lookup <- utils::read.csv(path, stringsAsFactors = FALSE)
+  lookup[, c("code", "short_desc")]
 }
 
 #' Get ICD-10-CM lookup table (cached)
 #' @return Data frame with code and short_desc columns, or NULL if unavailable
 get_icd10cm_lookup <- function() {
-  if (!icd_data_available()) {
-    return(NULL)
-  }
-
   if (is.null(.icd_cache$icd10cm)) {
-    tryCatch({
-      # Load icd10cm2016 data from icd.data package
-      data("icd10cm2016", package = "icd.data", envir = .icd_cache)
-      # Create simplified lookup with just code and description
-      .icd_cache$icd10cm <- .icd_cache$icd10cm2016[, c("code", "short_desc")]
+    .icd_cache$icd10cm <- load_bundled_icd_lookup("icd10cm_diagnosis_lookup.csv")
+    if (!is.null(.icd_cache$icd10cm)) {
       names(.icd_cache$icd10cm) <- c("code", "description")
-    }, error = function(e) {
-      warning("Could not load ICD-10-CM data: ", e$message)
-      .icd_cache$icd10cm <- NULL
-    })
+    }
   }
 
   .icd_cache$icd10cm
@@ -37,23 +53,11 @@ get_icd10cm_lookup <- function() {
 #' Get ICD-9-CM lookup table (cached)
 #' @return Data frame with code and description columns, or NULL if unavailable
 get_icd9cm_lookup <- function() {
-  if (!icd_data_available()) {
-    return(NULL)
-  }
-
   if (is.null(.icd_cache$icd9cm)) {
-    tryCatch({
-      # Load icd9cm_billable data from icd.data package
-      # Use the most recent version (32)
-      data("icd9cm_billable", package = "icd.data", envir = .icd_cache)
-      # Get the most recent year's data
-      icd9_data <- .icd_cache$icd9cm_billable[["32"]]
-      .icd_cache$icd9cm <- icd9_data[, c("code", "short_desc")]
+    .icd_cache$icd9cm <- load_bundled_icd_lookup("icd9cm_diagnosis_lookup.csv")
+    if (!is.null(.icd_cache$icd9cm)) {
       names(.icd_cache$icd9cm) <- c("code", "description")
-    }, error = function(e) {
-      warning("Could not load ICD-9-CM data: ", e$message)
-      .icd_cache$icd9cm <- NULL
-    })
+    }
   }
 
   .icd_cache$icd9cm
@@ -74,7 +78,7 @@ normalize_icd_code <- function(code) {
 
 #' Look up ICD code description
 #'
-#' Looks up the description for an ICD-9 or ICD-10 code using the icd.data package.
+#' Looks up the description for an ICD-9 or ICD-10 code using bundled lookup data.
 #' Falls back to the code itself if no description is found.
 #'
 #' @param code ICD code (character)

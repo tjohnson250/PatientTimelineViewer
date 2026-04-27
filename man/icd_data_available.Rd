@@ -2,13 +2,13 @@
 % Please edit documentation in R/icd_lookup.R
 \name{icd_data_available}
 \alias{icd_data_available}
-\title{Check if icd.data package is available}
+\title{Check if ICD description lookup data is available}
 \usage{
 icd_data_available()
 }
 \value{
-Logical TRUE if available
+Logical TRUE if bundled data is available
 }
 \description{
-Check if icd.data package is available
+Check if ICD description lookup data is available
 }
